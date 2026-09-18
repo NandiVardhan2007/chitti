@@ -212,7 +212,7 @@ val isLlmLoaded = app.extractionEngine?.isLlmLoaded() == true
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00695C))
                 ) {
                     if (isRunning) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                        com.owlcoders.chitti.ui.components.GeminiCircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Running AI Pipeline...")
                     } else {
