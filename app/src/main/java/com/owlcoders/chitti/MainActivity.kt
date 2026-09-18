@@ -121,17 +121,11 @@ class MainActivity : ComponentActivity() {
                         recognizer.process(image)
                             .addOnSuccessListener { visionText ->
                                 Log.d("ChittiVision", "OCR Text: ${visionText.text}")
-                
-                Scaffold(
-                    floatingActionButton = {
-                        FloatingActionButton(
-                            onClick = {
-                                // DEMO REPLAY: Inject fake notification into LLM directly
                                 scope.launch {
-                                    val engine = app.extractionEngine
+                                    val engine = (application as ChittiApp).extractionEngine
                                     val extracted = engine?.extract("OCR FROM FLYER: ${visionText.text}")
-                                    app.database.eventDao().insertEvent(
-                                        CapturedEvent(
+                                    (application as ChittiApp).database.eventDao().insertEvent(
+                                        com.owlcoders.chitti.db.entities.CapturedEvent(
                                             sourceApp = "com.owlcoders.chitti.vision",
                                             rawText = "Flyer text: ${visionText.text.take(50)}...",
                                             extractedWhat = extracted?.what,
