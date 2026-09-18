@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,18 +19,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.owlcoders.chitti.ui.theme.ChittiTheme
-import com.owlcoders.chitti.ui.screens.TodayScreen
-import com.owlcoders.chitti.db.CapturedEvent
-import kotlinx.coroutines.launch
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.runtime.*
-import android.util.Log
-import android.content.ComponentName
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -39,9 +33,9 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.owlcoders.chitti.db.CapturedEvent
-import com.owlcoders.chitti.db.entities.ChatHistoryEntity
 import com.owlcoders.chitti.db.entities.Memory
 import com.owlcoders.chitti.ui.screens.*
+import com.owlcoders.chitti.ui.splash.SplashScreen
 import com.owlcoders.chitti.ui.theme.ChittiTheme
 import kotlinx.coroutines.launch
 
@@ -58,9 +52,6 @@ sealed class Screen(val route: String, val icon: ImageVector, val label: String)
     object Settings : Screen("settings", Icons.Filled.Settings, "Settings")
 }
 
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.animation.Crossfade
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -70,7 +61,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var showSplash by remember { mutableStateOf(true) }
-            
+
             ChittiTheme {
                 val navController = rememberNavController()
                 val scope = rememberCoroutineScope()
@@ -106,9 +97,6 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(chatHistory) { chatMessageCount = chatHistory.size }
                 LaunchedEffect(automationHistory) { automationHistoryCount = automationHistory.size }
 
-                // Collect real data from Room
-                val events by (application as ChittiApp).database.eventDao().getAllEvents().collectAsState(initial = emptyList())
-                val scope = rememberCoroutineScope()
                 var hasNotificationAccess by remember { mutableStateOf(isNotificationServiceEnabled()) }
                 var previewMode by remember { mutableStateOf(false) }
 
@@ -122,10 +110,10 @@ class MainActivity : ComponentActivity() {
                             .addOnSuccessListener { visionText ->
                                 Log.d("ChittiVision", "OCR Text: ${visionText.text}")
                                 scope.launch {
-                                    val engine = (application as ChittiApp).extractionEngine
+                                    val engine = app.extractionEngine
                                     val extracted = engine?.extract("OCR FROM FLYER: ${visionText.text}")
-                                    (application as ChittiApp).database.eventDao().insertEvent(
-                                        com.owlcoders.chitti.db.entities.CapturedEvent(
+                                    app.database.eventDao().insertEvent(
+                                        CapturedEvent(
                                             sourceApp = "com.owlcoders.chitti.vision",
                                             rawText = "Flyer text: ${visionText.text.take(50)}...",
                                             extractedWhat = extracted?.what,
@@ -148,214 +136,216 @@ class MainActivity : ComponentActivity() {
                 // ----- UI -----
                 Crossfade(targetState = showSplash, label = "SplashCrossfade") { isSplash ->
                     if (isSplash) {
-                        com.owlcoders.chitti.ui.splash.SplashScreen(
+                        SplashScreen(
                             onSplashFinished = { showSplash = false }
                         )
                     } else {
                         if (hasNotificationAccess || previewMode) {
                             ChittiScaffold(
-                        navController = navController,
-                        onFabClick = { cameraLauncher.launch(null) }
-                    ) { innerPadding ->
-                        NavHost(
-                            navController = navController,
-                            startDestination = Screen.Home.route,
-                            modifier = Modifier.padding(innerPadding)
-                        ) {
-                            composable(Screen.Home.route) {
-                                Column(modifier = Modifier.fillMaxSize()) {
-                                    OutlinedTextField(
-                                        value = searchQuery,
-                                        onValueChange = { searchQuery = it },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        placeholder = { Text("Search Contextual Memory...") },
-                                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedContainerColor = androidx.compose.ui.graphics.Color.White,
-                                            unfocusedContainerColor = androidx.compose.ui.graphics.Color.White
-                                        )
-                                    )
-                                    TodayScreen(
-                                        events = events,
-                                        onDeleteEvent = { event ->
-                                            scope.launch {
-                                                app.database.eventDao().deleteEvent(event)
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-
-                            composable(Screen.Chat.route) {
-                                ChatBotScreen(
-                                    events = events,
-                                    chatHistory = chatHistory,
-                                    memories = memories,
-                                    onSaveMessage = { message ->
-                                        scope.launch {
-                                            app.database.chatHistoryDao().insertMessage(message)
-                                        }
-                                    }
-                                )
-                            }
-
-                            composable(Screen.Inbox.route) {
-                                InboxScreen(
-                                    notifications = notifications,
-                                    onMarkProcessed = { notification ->
-                                        scope.launch {
-                                            app.database.notificationDao().markProcessed(notification.id)
-                                        }
-                                    },
-                                    onDelete = { notification ->
-                                        scope.launch {
-                                            app.database.notificationDao().deleteNotification(notification)
-                                        }
-                                    }
-                                )
-                            }
-
-                            composable(Screen.Dashboard.route) {
-                                DashboardScreen(
-                                    events = events,
-                                    tasks = tasks,
-                                    notificationCount = notificationCount,
-                                    memoryCount = memoryCount,
-                                    documentCount = documentCount,
-                                    automationCount = automationHistoryCount
-                                )
-                            }
-
-                            composable(Screen.Automation.route) {
-                                AutomationScreen(history = automationHistory)
-                            }
-
-                            composable(Screen.Documents.route) {
-                                DocumentsScreen(
-                                    documents = documents,
-                                    onPickFile = {
-                                        // Launch SAF file picker
-                                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                                            addCategory(Intent.CATEGORY_OPENABLE)
-                                            type = "*/*"
-                                        }
-                                        startActivity(intent)
-                                    },
-                                    onDeleteDocument = { doc ->
-                                        scope.launch {
-                                            app.database.documentDao().deleteDocument(doc)
-                                        }
-                                    }
-                                )
-                            }
-
-                            composable(Screen.Memory.route) {
-                                MemoryScreen(
-                                    memories = memories,
-                                    categories = memoryCategories,
-                                    onAddMemory = { key, value, category ->
-                                        scope.launch {
-                                            app.database.memoryDao().insertMemory(
-                                                Memory(key = key, value = value, category = category)
+                                navController = navController,
+                                onFabClick = { cameraLauncher.launch(null) }
+                            ) { innerPadding ->
+                                NavHost(
+                                    navController = navController,
+                                    startDestination = Screen.Home.route,
+                                    modifier = Modifier.padding(innerPadding)
+                                ) {
+                                    composable(Screen.Home.route) {
+                                        Column(modifier = Modifier.fillMaxSize()) {
+                                            OutlinedTextField(
+                                                value = searchQuery,
+                                                onValueChange = { searchQuery = it },
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(16.dp),
+                                                placeholder = { Text("Search Contextual Memory...") },
+                                                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedContainerColor = Color.White,
+                                                    unfocusedContainerColor = Color.White
+                                                )
+                                            )
+                                            TodayScreen(
+                                                events = events,
+                                                onDeleteEvent = { event ->
+                                                    scope.launch {
+                                                        app.database.eventDao().deleteEvent(event)
+                                                    }
+                                                }
                                             )
                                         }
-                                    },
-                                    onDeleteMemory = { memory ->
-                                        scope.launch {
-                                            app.database.memoryDao().deleteMemory(memory)
-                                        }
-                                    },
-                                    onUpdateMemory = { memory ->
-                                        scope.launch {
-                                            app.database.memoryDao().updateMemory(memory)
-                                        }
                                     }
-                                )
-                            }
 
-                            composable(Screen.AiLab.route) {
-                                AiLabScreen(
-                                    onAddEvent = { event, task ->
-                                        scope.launch {
-                                            app.database.eventDao().insertEvent(event)
-                                            app.database.taskDao().insertTask(task)
-                                        }
+                                    composable(Screen.Chat.route) {
+                                        ChatBotScreen(
+                                            events = events,
+                                            chatHistory = chatHistory,
+                                            memories = memories,
+                                            onSaveMessage = { message ->
+                                                scope.launch {
+                                                    app.database.chatHistoryDao().insertMessage(message)
+                                                }
+                                            }
+                                        )
                                     }
-                                )
-                            }
 
-                            composable(Screen.Settings.route) {
-                                SettingsScreen(
-                                    hasNotificationAccess = hasNotificationAccess,
-                                    onWipeData = {
-                                        scope.launch {
-                                            app.database.eventDao().deleteAllEvents()
-                                            app.database.notificationDao().deleteAllNotifications()
-                                            app.database.chatHistoryDao().deleteAllMessages()
-                                            app.database.automationHistoryDao().deleteAllHistory()
-                                        }
-                                    },
-                                    eventCount = events.size,
-                                    taskCount = tasks.size,
-                                    notificationCount = notificationCount,
-                                    memoryCount = memoryCount,
-                                    documentCount = documentCount,
-                                    chatMessageCount = chatMessageCount,
-                                    automationHistoryCount = automationHistoryCount,
-                                    onClearNotifications = {
-                                        scope.launch { app.database.notificationDao().deleteAllNotifications() }
-                                    },
-                                    onClearChatHistory = {
-                                        scope.launch { app.database.chatHistoryDao().deleteAllMessages() }
-                                    },
-                                    onClearAutomationHistory = {
-                                        scope.launch { app.database.automationHistoryDao().deleteAllHistory() }
-                                    },
-                                    onClearMemories = {
-                                        scope.launch {
-                                            memories.forEach { app.database.memoryDao().deleteMemory(it) }
-                                        }
+                                    composable(Screen.Inbox.route) {
+                                        InboxScreen(
+                                            notifications = notifications,
+                                            onMarkProcessed = { notification ->
+                                                scope.launch {
+                                                    app.database.notificationDao().markProcessed(notification.id)
+                                                }
+                                            },
+                                            onDelete = { notification ->
+                                                scope.launch {
+                                                    app.database.notificationDao().deleteNotification(notification)
+                                                }
+                                            }
+                                        )
                                     }
-                                )
+
+                                    composable(Screen.Dashboard.route) {
+                                        DashboardScreen(
+                                            events = events,
+                                            tasks = tasks,
+                                            notificationCount = notificationCount,
+                                            memoryCount = memoryCount,
+                                            documentCount = documentCount,
+                                            automationCount = automationHistoryCount
+                                        )
+                                    }
+
+                                    composable(Screen.Automation.route) {
+                                        AutomationScreen(history = automationHistory)
+                                    }
+
+                                    composable(Screen.Documents.route) {
+                                        DocumentsScreen(
+                                            documents = documents,
+                                            onPickFile = {
+                                                // Launch SAF file picker
+                                                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                                                    addCategory(Intent.CATEGORY_OPENABLE)
+                                                    type = "*/*"
+                                                }
+                                                startActivity(intent)
+                                            },
+                                            onDeleteDocument = { doc ->
+                                                scope.launch {
+                                                    app.database.documentDao().deleteDocument(doc)
+                                                }
+                                            }
+                                        )
+                                    }
+
+                                    composable(Screen.Memory.route) {
+                                        MemoryScreen(
+                                            memories = memories,
+                                            categories = memoryCategories,
+                                            onAddMemory = { key, value, category ->
+                                                scope.launch {
+                                                    app.database.memoryDao().insertMemory(
+                                                        Memory(key = key, value = value, category = category)
+                                                    )
+                                                }
+                                            },
+                                            onDeleteMemory = { memory ->
+                                                scope.launch {
+                                                    app.database.memoryDao().deleteMemory(memory)
+                                                }
+                                            },
+                                            onUpdateMemory = { memory ->
+                                                scope.launch {
+                                                    app.database.memoryDao().updateMemory(memory)
+                                                }
+                                            }
+                                        )
+                                    }
+
+                                    composable(Screen.AiLab.route) {
+                                        AiLabScreen(
+                                            onAddEvent = { event, task ->
+                                                scope.launch {
+                                                    app.database.eventDao().insertEvent(event)
+                                                    app.database.taskDao().insertTask(task)
+                                                }
+                                            }
+                                        )
+                                    }
+
+                                    composable(Screen.Settings.route) {
+                                        SettingsScreen(
+                                            hasNotificationAccess = hasNotificationAccess,
+                                            onWipeData = {
+                                                scope.launch {
+                                                    app.database.eventDao().deleteAllEvents()
+                                                    app.database.notificationDao().deleteAllNotifications()
+                                                    app.database.chatHistoryDao().deleteAllMessages()
+                                                    app.database.automationHistoryDao().deleteAllHistory()
+                                                }
+                                            },
+                                            eventCount = events.size,
+                                            taskCount = tasks.size,
+                                            notificationCount = notificationCount,
+                                            memoryCount = memoryCount,
+                                            documentCount = documentCount,
+                                            chatMessageCount = chatMessageCount,
+                                            automationHistoryCount = automationHistoryCount,
+                                            onClearNotifications = {
+                                                scope.launch { app.database.notificationDao().deleteAllNotifications() }
+                                            },
+                                            onClearChatHistory = {
+                                                scope.launch { app.database.chatHistoryDao().deleteAllMessages() }
+                                            },
+                                            onClearAutomationHistory = {
+                                                scope.launch { app.database.automationHistoryDao().deleteAllHistory() }
+                                            },
+                                            onClearMemories = {
+                                                scope.launch {
+                                                    memories.forEach { app.database.memoryDao().deleteMemory(it) }
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // Onboarding: Request notification access
+                            Surface(
+                                modifier = Modifier.fillMaxSize(),
+                                color = MaterialTheme.colorScheme.background
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("🤖 Chitti", style = MaterialTheme.typography.headlineLarge)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("Offline AI Personal Assistant")
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                    Text("Chitti needs Notification Listener access to work")
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(onClick = {
+                                        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                                        startActivity(intent)
+                                    }) {
+                                        Text("Enable Notification Access")
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    OutlinedButton(onClick = { hasNotificationAccess = isNotificationServiceEnabled() }) {
+                                        Text("I've Enabled It — Continue")
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    TextButton(onClick = { previewMode = true }) {
+                                        Text("Explore App (Preview Mode)")
+                                    }
+                                }
                             }
                         }
                     }
-                } else {
-                    // Onboarding: Request notification access
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("🤖 Chitti", style = MaterialTheme.typography.headlineLarge)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Offline AI Personal Assistant")
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Text("Chitti needs Notification Listener access to work")
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = {
-                                val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                                startActivity(intent)
-                            }) {
-                                Text("Enable Notification Access")
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(onClick = { hasNotificationAccess = isNotificationServiceEnabled() }) {
-                                Text("I've Enabled It — Continue")
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(onClick = { previewMode = true }) {
-                                Text("Explore App (Preview Mode)")
-                            }
-                        }
-                    }
-                } // End Crossfade
+                }
             }
         }
     }
