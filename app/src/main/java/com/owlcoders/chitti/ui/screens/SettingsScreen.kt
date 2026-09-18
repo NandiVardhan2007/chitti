@@ -45,25 +45,7 @@ fun SettingsScreen(
             .background(Color(0xFFF5F5F5))
             .verticalScroll(rememberScrollState())
     ) {
-        // Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF37474F))
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "⚙️ Settings & Privacy",
-                color = Color.White,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // PERMISSIONS SECTION
+// PERMISSIONS SECTION
         SectionHeader("Permissions")
 
         Card(

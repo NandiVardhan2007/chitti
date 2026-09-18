@@ -61,29 +61,7 @@ fun ChatBotScreen(
             .fillMaxSize()
             .background(Color(0xFFF5F5F5))
     ) {
-        // Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF673AB7))
-                .padding(16.dp)
-        ) {
-            Column {
-                Text(
-                    text = "✨ Chitti AI Assistant",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
-                Text(
-                    text = "Memory-augmented · ${events.size} tasks · ${memories.size} memories",
-                    color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-        }
+
 
         // Chat History
         LazyColumn(

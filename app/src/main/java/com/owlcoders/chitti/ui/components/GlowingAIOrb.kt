@@ -12,8 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import com.owlcoders.chitti.ui.theme.ChittiYellow
-import com.owlcoders.chitti.ui.theme.ChittiYellowSecondary
+import com.owlcoders.chitti.ui.theme.AppYellow
+import com.owlcoders.chitti.ui.theme.AppYellowSecondary
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -81,8 +81,8 @@ fun GlowingAIOrb(
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        ChittiYellow.copy(alpha = glowOpacity),
-                        ChittiYellow.copy(alpha = 0f)
+                        AppYellow.copy(alpha = glowOpacity),
+                        AppYellow.copy(alpha = 0f)
                     ),
                     center = center,
                     radius = radius * 1.5f
@@ -94,8 +94,8 @@ fun GlowingAIOrb(
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        ChittiYellowSecondary,
-                        ChittiYellow
+                        AppYellowSecondary,
+                        AppYellow
                     ),
                     center = center,
                     radius = radius * 0.4f
@@ -107,14 +107,14 @@ fun GlowingAIOrb(
             val outerRingRadius = radius * 0.8f
             val startAngleOuter = ringRotation
             drawArc(
-                color = ChittiYellow.copy(alpha = 0.7f),
+                color = AppYellow.copy(alpha = 0.7f),
                 startAngle = startAngleOuter,
                 sweepAngle = 140f,
                 useCenter = false,
                 style = Stroke(width = 4.dp.toPx())
             )
             drawArc(
-                color = ChittiYellow.copy(alpha = 0.7f),
+                color = AppYellow.copy(alpha = 0.7f),
                 startAngle = startAngleOuter + 180f,
                 sweepAngle = 140f,
                 useCenter = false,
@@ -125,7 +125,7 @@ fun GlowingAIOrb(
             val innerRingRadius = radius * 0.6f
             val startAngleInner = innerRingRotation
             drawArc(
-                color = ChittiYellowSecondary.copy(alpha = 0.5f),
+                color = AppYellowSecondary.copy(alpha = 0.5f),
                 startAngle = startAngleInner,
                 sweepAngle = 200f,
                 useCenter = false,
@@ -145,12 +145,12 @@ fun GlowingAIOrb(
                 val y2 = center.y + particleRadius * sin(dotAngle2).toFloat()
 
                 drawCircle(
-                    color = ChittiYellow,
+                    color = AppYellow,
                     radius = 3.dp.toPx(),
                     center = androidx.compose.ui.geometry.Offset(x1, y1)
                 )
                 drawCircle(
-                    color = ChittiYellow,
+                    color = AppYellow,
                     radius = 3.dp.toPx(),
                     center = androidx.compose.ui.geometry.Offset(x2, y2)
                 )

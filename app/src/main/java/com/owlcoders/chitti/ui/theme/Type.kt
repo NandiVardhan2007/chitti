@@ -8,25 +8,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.owlcoders.chitti.R
 
-val CaveatFontFamily = FontFamily(
-    Font(R.font.caveat, FontWeight.Normal)
-)
+val ProfessionalFontFamily = FontFamily.SansSerif
 
 val ChittiTypography = Typography(
     bodyLarge = TextStyle(
-        fontFamily = CaveatFontFamily,
+        fontFamily = ProfessionalFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 24.sp,
-        lineHeight = 28.sp,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
         letterSpacing = 0.5.sp,
-        color = InkBlack
+        color = AppBlack
     ),
     titleLarge = TextStyle(
-        fontFamily = CaveatFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 32.sp,
-        lineHeight = 36.sp,
+        fontFamily = ProfessionalFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
         letterSpacing = 0.sp,
-        color = InkBlack
+        color = AppBlack
     )
 )

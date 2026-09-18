@@ -43,75 +43,7 @@ fun DashboardScreen(
             .background(Color(0xFFF5F5F5))
             .verticalScroll(rememberScrollState())
     ) {
-        // Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF283593))
-                .padding(16.dp)
-        ) {
-            Column {
-                Text(
-                    text = "📊 Chitti Dashboard",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
-                Text(
-                    text = "Your AI memory at a glance",
-                    color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-        }
-
-        // Quick Stats Grid
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            DashStatCard(
-                title = "Events",
-                value = "$total",
-                icon = Icons.AutoMirrored.Filled.EventNote,
-                color = Color(0xFF1565C0),
-                modifier = Modifier.weight(1f)
-            )
-            DashStatCard(
-                title = "Tasks",
-                value = "${tasks.size}",
-                icon = Icons.Filled.Task,
-                color = Color(0xFF2E7D32),
-                modifier = Modifier.weight(1f)
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            DashStatCard(
-                title = "Notifications",
-                value = "$notificationCount",
-                icon = Icons.Filled.Notifications,
-                color = Color(0xFFE65100),
-                modifier = Modifier.weight(1f)
-            )
-            DashStatCard(
-                title = "Memories",
-                value = "$memoryCount",
-                icon = Icons.Filled.Psychology,
-                color = Color(0xFF6A1B9A),
-                modifier = Modifier.weight(1f)
-            )
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(
+Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),

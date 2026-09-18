@@ -151,19 +151,25 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.padding(innerPadding)
                                 ) {
                                     composable(Screen.Home.route) {
-                                        Column(modifier = Modifier.fillMaxSize()) {
+                                        Column(modifier = Modifier.fillMaxSize().background(com.owlcoders.chitti.ui.theme.AppBlack)) {
                                             OutlinedTextField(
                                                 value = searchQuery,
                                                 onValueChange = { searchQuery = it },
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .padding(16.dp),
-                                                placeholder = { Text("Search Contextual Memory...") },
-                                                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                                                placeholder = { Text("Search Contextual Memory...", color = Color.Gray) },
+                                                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search", tint = com.owlcoders.chitti.ui.theme.AppYellow) },
                                                 colors = OutlinedTextFieldDefaults.colors(
-                                                    focusedContainerColor = Color.White,
-                                                    unfocusedContainerColor = Color.White
-                                                )
+                                                    focusedContainerColor = com.owlcoders.chitti.ui.theme.AppBlack,
+                                                    unfocusedContainerColor = com.owlcoders.chitti.ui.theme.AppBlack,
+                                                    focusedBorderColor = com.owlcoders.chitti.ui.theme.AppYellow,
+                                                    unfocusedBorderColor = Color.DarkGray,
+                                                    focusedTextColor = com.owlcoders.chitti.ui.theme.AppWhite,
+                                                    unfocusedTextColor = com.owlcoders.chitti.ui.theme.AppWhite,
+                                                    cursorColor = com.owlcoders.chitti.ui.theme.AppYellow
+                                                ),
+                                                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
                                             )
                                             TodayScreen(
                                                 events = events,
@@ -383,7 +389,10 @@ fun ChittiScaffold(
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = com.owlcoders.chitti.ui.theme.AppBlack,
+                contentColor = com.owlcoders.chitti.ui.theme.AppWhite
+            ) {
                 bottomScreens.forEach { screen ->
                     NavigationBarItem(
                         icon = { Icon(screen.icon, contentDescription = screen.label) },
@@ -397,58 +406,19 @@ fun ChittiScaffold(
                                     restoreState = true
                                 }
                             }
-                        }
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = com.owlcoders.chitti.ui.theme.AppBlack,
+                            selectedTextColor = com.owlcoders.chitti.ui.theme.AppYellow,
+                            indicatorColor = com.owlcoders.chitti.ui.theme.AppYellow,
+                            unselectedIconColor = Color.Gray,
+                            unselectedTextColor = Color.Gray
+                        )
                     )
                 }
             }
         },
-        topBar = {
-            @OptIn(ExperimentalMaterial3Api::class)
-            TopAppBar(
-                title = {
-                    Text(
-                        when (currentRoute) {
-                            Screen.Home.route -> "Chitti"
-                            Screen.Chat.route -> "AI Chat"
-                            Screen.Inbox.route -> "Inbox"
-                            Screen.Dashboard.route -> "Dashboard"
-                            Screen.Settings.route -> "Settings"
-                            Screen.AiLab.route -> "AI Lab & Benchmark"
-                            Screen.Automation.route -> "Automation"
-                            Screen.Documents.route -> "Documents"
-                            Screen.Memory.route -> "Memory"
-                            else -> "Chitti"
-                        }
-                    )
-                },
-                actions = {
-                    Box {
-                        IconButton(onClick = { showMoreMenu = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = "More")
-                        }
-                        DropdownMenu(
-                            expanded = showMoreMenu,
-                            onDismissRequest = { showMoreMenu = false }
-                        ) {
-                            drawerScreens.forEach { screen ->
-                                DropdownMenuItem(
-                                    text = { Text(screen.label) },
-                                    leadingIcon = { Icon(screen.icon, contentDescription = screen.label) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        navController.navigate(screen.route) {
-                                            popUpTo(Screen.Home.route) { saveState = true }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            )
-        },
+
         floatingActionButton = {
             if (currentRoute == Screen.Home.route) {
                 FloatingActionButton(onClick = onFabClick) {

@@ -35,9 +35,10 @@ class ExtractionEngine(private val context: Context, modelPath: String = "/data/
             llmInference = LlmInference.createFromOptions(context, options)
             lastInferenceMode = "Gemma 2B (On-Device)"
             Log.d("ChittiExtraction", "LLM Initialized successfully from $modelPath")
-        } catch (e: Exception) {
-            Log.i("ChittiExtraction", "LLM file not found or unavailable, operating in fast rule-based mode: ${e.message}")
+        } catch (t: Throwable) {
+            Log.i("ChittiExtraction", "LLM model or native engine unavailable, operating in fast rule-based mode: ${t.message}")
             lastInferenceMode = "Rule-based Regex"
+            llmInference = null
         }
     }
 
@@ -98,8 +99,8 @@ class ExtractionEngine(private val context: Context, modelPath: String = "/data/
                     urgency = json.optString("urgency", "Medium"),
                     confidence = json.optDouble("confidence", 0.0)
                 )
-            } catch (e: Exception) {
-                Log.w("ChittiExtraction", "LLM extraction error, using rule-based fallback: ${e.message}")
+            } catch (t: Throwable) {
+                Log.w("ChittiExtraction", "LLM extraction error, using rule-based fallback: ${t.message}")
             }
         }
 
@@ -226,8 +227,8 @@ class ExtractionEngine(private val context: Context, modelPath: String = "/data/
                 return mutex.withLock {
                     llm.generateResponse(prompt).trim()
                 }
-            } catch (e: Exception) {
-                Log.w("ChittiExtraction", "LLM smart reply failed: ${e.message}")
+            } catch (t: Throwable) {
+                Log.w("ChittiExtraction", "LLM smart reply failed: ${t.message}")
             }
         }
 
@@ -261,8 +262,8 @@ class ExtractionEngine(private val context: Context, modelPath: String = "/data/
                 return mutex.withLock {
                     llm.generateResponse(prompt).trim()
                 }
-            } catch (e: Exception) {
-                Log.w("ChittiExtraction", "LLM RAG response failed: ${e.message}")
+            } catch (t: Throwable) {
+                Log.w("ChittiExtraction", "LLM RAG response failed: ${t.message}")
             }
         }
 

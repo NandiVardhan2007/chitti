@@ -22,8 +22,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import com.owlcoders.chitti.ChittiApp
 import com.owlcoders.chitti.db.CapturedEvent
-import com.owlcoders.chitti.ui.theme.ActionRed
-import com.owlcoders.chitti.ui.theme.PaperWhite
+import com.owlcoders.chitti.ui.theme.AppYellow
+import com.owlcoders.chitti.ui.theme.AppWhite
 import kotlinx.coroutines.launch
 
 @Composable
@@ -36,10 +36,10 @@ fun ChittiCard(event: CapturedEvent, onDelete: () -> Unit = {}, modifier: Modifi
     val context = LocalContext.current
 
     val containerColor = when {
-        event.urgency == "High" -> Color(0xFFFFEBEE)
-        event.category == "Work" -> Color(0xFFE3F2FD)
-        event.category == "Academic" -> Color(0xFFE8F5E9)
-        else -> Color(0xFFFFF9C4) // Classic Yellow Sticky Note
+        event.urgency == "High" -> Color(0xFFFFD60A) // AppYellow
+        event.category == "Work" -> Color(0xFFFFF07A) // AppYellowSecondary
+        event.category == "Academic" -> Color(0xFFFFFFFF) // AppWhite
+        else -> Color(0xFFFFFFFF) // AppWhite
     }
 
 
@@ -124,7 +124,7 @@ fun ChittiCard(event: CapturedEvent, onDelete: () -> Unit = {}, modifier: Modifi
                             }
                             context.startActivity(intent)
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = ActionRed)
+                        colors = ButtonDefaults.buttonColors(containerColor = AppYellow, contentColor = Color.Black)
                     ) {
                         Text("Calendar")
                     }

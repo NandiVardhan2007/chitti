@@ -29,29 +29,7 @@ fun AutomationScreen(
             .fillMaxSize()
             .background(Color(0xFFF5F5F5))
     ) {
-        // Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF00695C))
-                .padding(16.dp)
-        ) {
-            Column {
-                Text(
-                    text = "⚡ Automation Log",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
-                Text(
-                    text = "${history.size} actions executed",
-                    color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-        }
+
 
         // Stats bar
         val successCount = history.count { it.result.startsWith("success") }

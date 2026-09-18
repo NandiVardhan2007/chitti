@@ -14,7 +14,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.owlcoders.chitti.ui.theme.ActionRed
+import com.owlcoders.chitti.ui.theme.AppYellow
 import com.owlcoders.chitti.ui.theme.OverlayScrim
 
 enum class VoiceState {
@@ -73,9 +73,9 @@ fun VoiceIndicator(state: VoiceState) {
             .scale(scale)
             .background(
                 color = when (state) {
-                    VoiceState.LISTENING -> ActionRed
-                    VoiceState.THINKING -> Color.Gray
-                    VoiceState.SPEAKING -> Color.Green
+                    VoiceState.LISTENING -> AppYellow
+                    VoiceState.THINKING -> Color.White
+                    VoiceState.SPEAKING -> AppYellow
                     else -> Color.Transparent
                 },
                 shape = CircleShape

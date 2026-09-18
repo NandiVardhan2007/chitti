@@ -26,8 +26,8 @@ class VadEngine(private val context: Context) {
             val modelBytes = context.assets.open("silero_vad.onnx").readBytes()
             session = env?.createSession(modelBytes, OrtSession.SessionOptions())
             Log.d("ChittiVAD", "Silero VAD ONNX model loaded successfully.")
-        } catch (e: Exception) {
-            Log.e("ChittiVAD", "Failed to load VAD model. Make sure silero_vad.onnx is in assets: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("ChittiVAD", "Failed to load VAD model: ${t.message}")
         }
     }
 
@@ -82,8 +82,8 @@ class VadEngine(private val context: Context) {
             result.close()
 
             return speechProb
-        } catch (e: Exception) {
-            Log.e("ChittiVAD", "Error processing audio chunk: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("ChittiVAD", "Error processing audio chunk: ${t.message}")
             return 0f
         }
     }

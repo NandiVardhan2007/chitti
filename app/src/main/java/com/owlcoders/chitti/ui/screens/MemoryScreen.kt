@@ -46,70 +46,7 @@ fun MemoryScreen(
             .fillMaxSize()
             .background(Color(0xFFF5F5F5))
     ) {
-        // Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFAD1457))
-                .padding(16.dp)
-        ) {
-            Column {
-                Text(
-                    text = "🧠 Personal Memory",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
-                Text(
-                    text = "${memories.size} memories stored",
-                    color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-        }
-
-        // Search bar
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            placeholder = { Text("Search memories...") },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
-            ),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true
-        )
-
-        // Category filter
-        val allCategories = listOf("all") + categories
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            allCategories.forEach { category ->
-                FilterChip(
-                    selected = selectedCategory == category,
-                    onClick = { selectedCategory = category },
-                    label = { Text(if (category == "all") "All" else category.replaceFirstChar { it.uppercase() }) },
-                    leadingIcon = if (selectedCategory == category) {
-                        { Icon(Icons.Filled.Done, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                    } else null
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Add memory button
+// Add memory button
         Button(
             onClick = { showAddDialog = true },
             modifier = Modifier

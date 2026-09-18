@@ -5,6 +5,6 @@
         <item name="windowSplashScreenBackground">@android:color/black</item>
         
         <!-- Use the default day night theme as the post splash theme -->
-        <item name="postSplashScreenTheme">@android:style/Theme.DeviceDefault.DayNight</item>
+        <item name="postSplashScreenTheme">@android:style/Theme.DeviceDefault.NoActionBar</item>
     </style>
 </resources>

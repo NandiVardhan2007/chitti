@@ -21,7 +21,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
 import com.owlcoders.chitti.ui.components.ChittiBranding
 import com.owlcoders.chitti.ui.components.GlowingAIOrb
-import com.owlcoders.chitti.ui.theme.SplashBackgroundDark
+import com.owlcoders.chitti.ui.theme.AppBlack
 import kotlinx.coroutines.delay
 
 @Composable
@@ -78,7 +78,7 @@ fun SplashScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(SplashBackgroundDark)
+            .background(AppBlack)
             .alpha(bgAlpha),
         contentAlignment = Alignment.Center
     ) {

@@ -14,32 +14,18 @@ import androidx.compose.ui.unit.dp
 import com.owlcoders.chitti.R
 import com.owlcoders.chitti.db.CapturedEvent
 import com.owlcoders.chitti.ui.components.ChittiCard
-import com.owlcoders.chitti.ui.theme.CorkboardBrown
+import com.owlcoders.chitti.ui.theme.AppBlack
 
 @Composable
 fun TodayScreen(events: List<CapturedEvent>, onDeleteEvent: (CapturedEvent) -> Unit = {}) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Realistic Corkboard Background
-        androidx.compose.foundation.Image(
-            painter = painterResource(id = R.drawable.corkboard_bg),
-            contentDescription = "Corkboard Background",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+    Box(modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black)) {
         
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            Text(
-                text = "Today's Chitti",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = androidx.compose.ui.graphics.Color.White,
-                modifier = Modifier.padding(bottom = 16.dp, top = 24.dp)
-            )
-            
+
             if (events.isEmpty()) {
                 Text(text = "No commitments caught today. Desk is clean!", color = androidx.compose.ui.graphics.Color.White)
             } else {

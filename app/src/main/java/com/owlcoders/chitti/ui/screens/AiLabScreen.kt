@@ -65,53 +65,7 @@ fun AiLabScreen(
             .background(Color(0xFFF5F5F5))
             .verticalScroll(rememberScrollState())
     ) {
-        // Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF00695C))
-                .padding(16.dp)
-        ) {
-            Column {
-                Text(
-                    text = "🧪 AI Performance Lab & Simulator",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
-                Text(
-                    text = "Benchmark on-device inference, latency, and simulate notifications per plan.md §14",
-                    color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-        }
-
-        // Hardware & Engine Status Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Memory, contentDescription = "Engine", tint = Color(0xFF00695C))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Hardware & Inference Profile",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                val isLlmLoaded = app.extractionEngine?.isLlmLoaded() == true
+val isLlmLoaded = app.extractionEngine?.isLlmLoaded() == true
                 val mode = app.extractionEngine?.lastInferenceMode ?: if (isLlmLoaded) "Gemma 2B (On-Device)" else "Rule-based Regex"
                 val latency = app.extractionEngine?.lastInferenceLatencyMs ?: 0L
 
