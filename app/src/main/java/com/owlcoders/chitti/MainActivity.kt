@@ -58,13 +58,19 @@ sealed class Screen(val route: String, val icon: ImageVector, val label: String)
     object Settings : Screen("settings", Icons.Filled.Settings, "Settings")
 }
 
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.animation.Crossfade
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
         requestBatteryOptimizationExemption()
 
         setContent {
+            var showSplash by remember { mutableStateOf(true) }
+            
             ChittiTheme {
                 val navController = rememberNavController()
                 val scope = rememberCoroutineScope()
@@ -146,8 +152,14 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // ----- UI -----
-                if (hasNotificationAccess || previewMode) {
-                    ChittiScaffold(
+                Crossfade(targetState = showSplash, label = "SplashCrossfade") { isSplash ->
+                    if (isSplash) {
+                        com.owlcoders.chitti.ui.splash.SplashScreen(
+                            onSplashFinished = { showSplash = false }
+                        )
+                    } else {
+                        if (hasNotificationAccess || previewMode) {
+                            ChittiScaffold(
                         navController = navController,
                         onFabClick = { cameraLauncher.launch(null) }
                     ) { innerPadding ->
@@ -346,45 +358,10 @@ class MainActivity : ComponentActivity() {
                             Spacer(modifier = Modifier.height(8.dp))
                             TextButton(onClick = { previewMode = true }) {
                                 Text("Explore App (Preview Mode)")
-                                    val engine = (application as ChittiApp).extractionEngine
-                                    Log.d("ChittiDemo", "Replay triggered. Running LLM...")
-                                    val extracted = engine?.extract("repu class unda? 9 ki?")
-                                    Log.d("ChittiDemo", "Extracted: ${extracted?.what} at ${extracted?.whenTime}")
-                                }
-                            }
-                        ) {
-                            Icon(Icons.Filled.PlayArrow, contentDescription = "Debug Replay")
-                        }
-                    }
-                ) { innerPadding ->
-                    Surface(
-                        modifier = Modifier.fillMaxSize().padding(innerPadding),
-                        color = MaterialTheme.colorScheme.background
-                    ) {
-                        if (hasNotificationAccess) {
-                            TodayScreen(events = events)
-                        } else {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text("Chitti - Notification Listener")
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = {
-                                    val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                                    startActivity(intent)
-                                }) {
-                                    Text("Enable Notification Access")
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = { hasNotificationAccess = isNotificationServiceEnabled() }) {
-                                    Text("I've Enabled It")
-                                }
                             }
                         }
                     }
-                }
+                } // End Crossfade
             }
         }
     }
