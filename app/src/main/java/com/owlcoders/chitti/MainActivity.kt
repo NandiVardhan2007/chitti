@@ -48,18 +48,6 @@ class MainActivity : ComponentActivity() {
                                     Log.d("ChittiDemo", "Replay triggered. Running LLM...")
                                     val extracted = engine?.extract("repu class unda? 9 ki?")
                                     Log.d("ChittiDemo", "Extracted: ${extracted?.what} at ${extracted?.whenTime}")
-                                    
-                                    (application as ChittiApp).database.eventDao().insertEvent(
-                                        CapturedEvent(
-                                            sourceApp = "com.whatsapp",
-                                            rawText = "repu class unda? 9 ki?",
-                                            extractedWhat = extracted?.what,
-                                            extractedWhen = extracted?.whenTime,
-                                            extractedWho = extracted?.who,
-                                            status = if (extracted != null) "extracted" else "pending",
-                                            timestamp = System.currentTimeMillis()
-                                        )
-                                    )
                                 }
                             }
                         ) {
