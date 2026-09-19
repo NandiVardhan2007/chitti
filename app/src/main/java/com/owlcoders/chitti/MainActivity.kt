@@ -334,7 +334,7 @@ class MainActivity : FragmentActivity() {
                 }
 
                 val menuActions = AppMenuActions(
-                    accountLabel = user?.email ?: user?.phoneNumber,
+                    accountLabel = user?.email,
                     onPersonalDetails = { navController.navigate(Routes.PROFILE) { launchSingleTop = true } },
                     onBackup = { navController.navigate(Routes.BACKUP) { launchSingleTop = true } },
                     onSettings = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
@@ -448,7 +448,7 @@ class MainActivity : FragmentActivity() {
                                 composable(Routes.SETTINGS) {
                                     SettingsScreen(
                                         profileName = profileName ?: user?.displayName,
-                                        accountEmail = user?.email ?: user?.phoneNumber,
+                                        accountEmail = user?.email,
                                         accountProvider = Auth.providerLabel(user),
                                         counts = StoredCounts(
                                             commitments = events.size,
