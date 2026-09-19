@@ -69,11 +69,16 @@ fun DrawScope.drawChittiBody(center: Offset, radius: Float, colors: ChittiColors
 fun DrawScope.drawChittiEyes(center: Offset, radius: Float, expression: FaceExpression, color: Color) {
     val e = expression
     val w = radius * 0.242f
-    val h = (radius * 0.548f * e.eyeOpen.coerceIn(0.06f, 1.2f) * (1f - 0.42f * e.squint)).coerceAtLeast(w * 0.35f)
+    val tall = radius * 0.548f * e.eyeOpen.coerceIn(0.06f, 1.2f) * (1f - 0.42f * e.squint)
+    // Shorter than it is wide, an eye stops being a small capsule and becomes a lid line: flatter
+    // and a little wider, so a shut eye reads as shut rather than as a small round eye.
+    val shut = ((w - tall) / (w * 0.7f)).coerceIn(0f, 1f)
+    val ew = w * (1f + 0.35f * shut)
+    val h = tall.coerceAtLeast(w * 0.3f)
     val y = center.y - radius * 0.113f + e.lookY * radius * 0.08f - e.squint * radius * 0.05f
     for (side in listOf(-1f, 1f)) {
         val x = center.x + side * radius * 0.25f + e.lookX * radius * 0.13f
-        drawPath(eyePath(x, y, w, h, center.y), color)
+        drawPath(eyePath(x, y, ew, h, center.y), color)
     }
 }
 
@@ -96,11 +101,18 @@ fun DrawScope.drawChittiMouth(center: Offset, radius: Float, open: Float, presen
     )
 }
 
-/** A capsule of [w] x [h] centred at ([cx], [cy]), slanted like the logo's eyes. */
+/**
+ * A capsule of [w] x [h] centred at ([cx], [cy]), slanted like the logo's eyes. Upright when it is
+ * taller than wide (an open eye), lying down when it is wider than tall (a shut one).
+ */
 private fun eyePath(cx: Float, cy: Float, w: Float, h: Float, pivotY: Float): Path {
-    val r = w / 2f
-    val top = minOf(cy - h / 2f + r, cy)
-    val bottom = maxOf(cy + h / 2f - r, cy)
+    val upright = h >= w
+    val r = minOf(w, h) / 2f
+    // The two rounded ends, and the angle the first one starts at: top end from the left for an
+    // upright capsule, right end from the top for a lying one.
+    val endA = if (upright) Offset(cx, cy - h / 2f + r) else Offset(cx + w / 2f - r, cy)
+    val endB = if (upright) Offset(cx, cy + h / 2f - r) else Offset(cx - w / 2f + r, cy)
+    val start = if (upright) PI.toFloat() else -PI.toFloat() / 2f
     val p = Path()
     val steps = 10
     fun add(x: Float, y: Float, first: Boolean) {
@@ -108,12 +120,12 @@ private fun eyePath(cx: Float, cy: Float, w: Float, h: Float, pivotY: Float): Pa
         if (first) p.moveTo(sx, y) else p.lineTo(sx, y)
     }
     for (i in 0..steps) {
-        val a = PI.toFloat() + PI.toFloat() * i / steps
-        add(cx + r * cos(a), top + r * sin(a), i == 0)
+        val a = start + PI.toFloat() * i / steps
+        add(endA.x + r * cos(a), endA.y + r * sin(a), i == 0)
     }
     for (i in 0..steps) {
-        val a = PI.toFloat() * i / steps
-        add(cx + r * cos(a), bottom + r * sin(a), false)
+        val a = start + PI.toFloat() + PI.toFloat() * i / steps
+        add(endB.x + r * cos(a), endB.y + r * sin(a), false)
     }
     p.close()
     return p

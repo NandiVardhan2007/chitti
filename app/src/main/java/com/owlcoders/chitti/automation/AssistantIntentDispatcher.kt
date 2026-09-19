@@ -218,9 +218,18 @@ class AssistantIntentDispatcher(
         // Questions explicitly about what the user has saved go through the memory lookup;
         // everything else is a normal question and gets a normal answer.
         val asksAboutMemory = Regex("\\b(my|i have|do i|did i|remember|saved|remind(ed)? me)\\b").containsMatchIn(lower)
+        // A fact the user saved ("what's my branch?") is answered from the fact itself: exact and
+        // instant. The model only sees notifications in its memory prompt, so it can't know these.
+        if (asksAboutMemory) {
+            matchSavedFact(lower, memories)?.let { fact ->
+                return@withContext reply(describeSavedFact(fact), label = "Memory")
+            }
+        }
         if (asksAboutMemory && engine != null) {
             val ragResult = engine.generateRagResponse(cleaned.take(300), events)
-            if (!ragResult.contains("I don't have that in my memory")) {
+            // The model words its refusal its own way ("I don't have that information in my
+            // memory"), so match the gist, not the exact sentence the prompt suggested.
+            if (!Regex("don'?t have (that|this|any)", RegexOption.IGNORE_CASE).containsMatchIn(ragResult)) {
                 return@withContext reply(ragResult, label = "Memory")
             }
         }
@@ -384,4 +393,34 @@ class AssistantIntentDispatcher(
             false to "Could not toggle the flashlight. It may be in use by the camera."
         }
     }
+}
+
+private val FactFillerWords = setOf(
+    "my", "the", "a", "an", "of", "is", "are", "was", "what", "whats", "who", "whos", "which",
+    "where", "when", "i", "me", "do", "does", "did", "tell", "about", "to", "for", "in", "on", "s"
+)
+
+private fun factWords(text: String): List<String> =
+    text.lowercase().split(Regex("[^a-z0-9]+"))
+        .filter { it.isNotBlank() && it !in FactFillerWords }
+        .map { if (it.length > 3) it.removeSuffix("s") else it }
+
+/**
+ * The saved fact a question asks about: every meaningful word of the fact's name appears in the
+ * question ("what is my branch" -> "My branch"). The most specific match wins; null if none.
+ */
+internal fun matchSavedFact(question: String, memories: List<Memory>): Memory? {
+    val asked = factWords(question).toSet()
+    return memories
+        .map { it to factWords(it.key) }
+        .filter { (_, words) -> words.isNotEmpty() && asked.containsAll(words) }
+        .maxByOrNull { (_, words) -> words.size }
+        ?.first
+}
+
+/** "My branch" + "CSE - AIML" -> "Your branch is CSE - AIML." */
+internal fun describeSavedFact(fact: Memory): String {
+    val key = fact.key.trim()
+    val value = fact.value.trim().trimEnd('.')
+    return if (key.startsWith("my ", ignoreCase = true)) "Your ${key.drop(3)} is $value." else "$key: $value."
 }

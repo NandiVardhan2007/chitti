@@ -3,6 +3,7 @@ package com.owlcoders.chitti.ui.screens
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,7 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -80,6 +83,7 @@ private enum class Field { None, Name, Email, Password }
 @Composable
 fun LoginScreen(onSignedIn: () -> Unit, onSkip: (() -> Unit)?) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val colors = Chitti.colors
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
@@ -141,6 +145,8 @@ fun LoginScreen(onSignedIn: () -> Unit, onSkip: (() -> Unit)?) {
             .statusBarsPadding()
             .navigationBarsPadding()
             .imePadding()
+            // A tap outside the fields ends editing, so Chitti opens its eyes again.
+            .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } }
     ) {
         Column(
             modifier = Modifier
