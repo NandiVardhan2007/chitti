@@ -10,9 +10,10 @@ import androidx.compose.ui.graphics.Color
  * Chitti colour tokens, one set per appearance.
  *
  * The structure follows Apple's grouped-content model: a grouped background, a surface for the
- * groups that sit on it, and a raised fill for controls inside those groups. The neutrals are
- * true greys (not tinted), so the single accent is the only colour on screen that is not a
- * statement of meaning. Semantic hues carry state only: success, warning, danger, info.
+ * groups that sit on it, and a raised fill for controls inside those groups. The values come from
+ * the iQOO hackathon palette (the same one as the pitch deck): brand yellow #F0B31C on black
+ * #050508, warm paper neutrals in light mode. Yellow is the single accent; semantic hues carry
+ * state only: success, warning, danger, info.
  *
  * Every text token clears 4.5:1 against both `background` and `surface` in its appearance, except
  * `textLow`, which is reserved for placeholders, disabled glyphs and chevrons.
@@ -39,6 +40,8 @@ data class ChittiColors(
     val accent: Color,
     /** Accent as a filled background behind [onAccent]. */
     val accentFill: Color,
+    /** Deeper accent: the far side of a gradient, the pressed shade of a filled control. */
+    val accentDeep: Color,
     val onAccent: Color,
     /** 12-16% accent, for selected capsules. */
     val accentWash: Color,
@@ -61,26 +64,29 @@ data class ChittiColors(
 
 val LightChittiColors = ChittiColors(
     isDark = false,
-    background = Color(0xFFF2F2F7),
-    surface = Color(0xFFFFFFFF),
-    surfaceRaised = Color(0xFFF2F2F7),
-    fill = Color(0x1F787880),
-    separator = Color(0xFFD1D1D6),
-    textHigh = Color(0xFF000000),
-    textMid = Color(0xFF6C6C70),
-    textLow = Color(0xFF9A9AA0),
-    accent = Color(0xFF3A57D9),
-    accentFill = Color(0xFF3A57D9),
-    onAccent = Color(0xFFFFFFFF),
-    accentWash = Color(0x1F3A57D9),
+    background = Color(0xFFF2F2EC),   // iQOO paper-deep
+    surface = Color(0xFFFAFAF7),      // iQOO paper
+    surfaceRaised = Color(0xFFECEAE3),
+    fill = Color(0x1F78756B),
+    separator = Color(0xFFDDD9CC),    // iQOO line, one step darker so it reads on paper
+    textHigh = Color(0xFF000000),     // iQOO ink
+    textMid = Color(0xFF5A5A5A),      // iQOO ink-mute
+    textLow = Color(0xFF8C8A83),
+    // Yellow text is unreadable on paper (1.8:1), so text uses the site's deep yellow-brown;
+    // filled controls use the true brand yellow with black on top.
+    accent = Color(0xFF8A6205),       // iQOO iqoo-text
+    accentFill = Color(0xFFF0B31C),   // iQOO yellow
+    accentDeep = Color(0xFFC8920A),   // iQOO iqoo-deep
+    onAccent = Color(0xFF000000),
+    accentWash = Color(0x2EF0B31C),
     success = Color(0xFF1E7B34),
-    warning = Color(0xFFA85100),
-    danger = Color(0xFFD70015),
+    warning = Color(0xFFA34A00),
+    danger = Color(0xFFC8102E),       // iQOO alert red
     info = Color(0xFF00699B),
-    purple = Color(0xFF8944AB),
-    glassTint = Color(0xD9F9F9FB),
-    glassFallback = Color(0xFFF9F9FB),
-    glassTextMid = Color(0xFF505055),
+    purple = Color(0xFF7C4DDA),       // iQOO HYD
+    glassTint = Color(0xD9FAFAF7),
+    glassFallback = Color(0xFFFAFAF7),
+    glassTextMid = Color(0xFF4A4A48),
     specular = Color(0xFFFFFFFF),
     shadow = Color(0x33000000),
     scrim = Color(0x66000000)
@@ -88,26 +94,27 @@ val LightChittiColors = ChittiColors(
 
 val DarkChittiColors = ChittiColors(
     isDark = true,
-    background = Color(0xFF000000),
-    surface = Color(0xFF1C1C1E),
-    surfaceRaised = Color(0xFF2C2C2E),
-    fill = Color(0x3D767680),
-    separator = Color(0xFF38383A),
+    background = Color(0xFF050508),   // iQOO dark background
+    surface = Color(0xFF1A1A1A),      // iQOO ink-soft
+    surfaceRaised = Color(0xFF262626),
+    fill = Color(0x2EFFFFFF),
+    separator = Color(0xFF2E2E2E),
     textHigh = Color(0xFFFFFFFF),
-    textMid = Color(0xFFAEAEB2),
-    textLow = Color(0xFF7C7C80),
-    accent = Color(0xFF8FA6FF),
-    accentFill = Color(0xFF4E6EF2),
-    onAccent = Color(0xFFFFFFFF),
-    accentWash = Color(0x2E8FA6FF),
+    textMid = Color(0xFFB3B3B3),      // white at 70%, as on the site's dark sections
+    textLow = Color(0xFF7A7A7A),
+    accent = Color(0xFFF0B31C),       // iQOO yellow
+    accentFill = Color(0xFFF0B31C),
+    accentDeep = Color(0xFFC8920A),
+    onAccent = Color(0xFF000000),
+    accentWash = Color(0x2EF0B31C),
     success = Color(0xFF30D158),
-    warning = Color(0xFFFF9F0A),
-    danger = Color(0xFFFF6961),
+    warning = Color(0xFFFF8A3D),      // orange, kept clear of the yellow accent
+    danger = Color(0xFFFF5A6E),
     info = Color(0xFF64D2FF),
-    purple = Color(0xFFDA8FFF),
-    glassTint = Color(0xC71C1C1E),
-    glassFallback = Color(0xFF1C1C1E),
-    glassTextMid = Color(0xFFC7C7CC),
+    purple = Color(0xFFA987F0),
+    glassTint = Color(0xC71A1A1A),
+    glassFallback = Color(0xFF1A1A1A),
+    glassTextMid = Color(0xFFC9C9C9),
     specular = Color(0xFFFFFFFF),
     shadow = Color(0x80000000),
     scrim = Color(0x99000000)

@@ -382,7 +382,7 @@ private fun VoiceForm(
         drawPath(
             path = path,
             brush = Brush.radialGradient(
-                colors = listOf(colors.accent, colors.accentFill),
+                colors = listOf(colors.accentFill, colors.accentDeep),
                 center = Offset(c.x - base * 0.3f, c.y - base * 0.35f),
                 radius = base * 1.6f
             )
