@@ -1,49 +1,83 @@
 package com.owlcoders.chitti.security
 
-import android.content.ActivityNotFoundException
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.GppBad
-import androidx.compose.material.icons.filled.GppMaybe
-import androidx.compose.material3.*
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.GppBad
+import androidx.compose.material.icons.rounded.GppGood
+import androidx.compose.material.icons.rounded.GppMaybe
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.owlcoders.chitti.ui.components.Inset
+import com.owlcoders.chitti.ui.components.InsetGroup
+import com.owlcoders.chitti.ui.components.InsetRow
+import com.owlcoders.chitti.ui.components.LatticeLoader
+import com.owlcoders.chitti.ui.components.LatticeStatus
+import com.owlcoders.chitti.ui.components.LinkButton
+import com.owlcoders.chitti.ui.components.Motion
+import com.owlcoders.chitti.ui.components.PrimaryButton
+import com.owlcoders.chitti.ui.components.SecondaryButton
+import com.owlcoders.chitti.ui.components.Space
+import com.owlcoders.chitti.ui.components.rememberHaptics
 import com.owlcoders.chitti.ui.theme.Chitti
 import com.owlcoders.chitti.ui.theme.ChittiTheme
+import kotlinx.coroutines.delay
 
 /**
- * LinkGuard interstitial.
+ * LinkGuard: the screen every tapped link passes through when Chitti is the phone's link opener
+ * (see [BrowserRouter]), and the target of Chitti's own "suspicious link" alerts.
  *
- * Two entry paths:
- *  1. Internal: any Chitti action that opens a URL routes here first
- *     (see [open] and ActionExecutor.OPEN_DEEP_LINK).
- *  2. External: the activity is registered as a browsable VIEW handler, so the user can
- *     pick "Chitti LinkGuard" when tapping links in WhatsApp/SMS. We scan, then hand the
- *     link to their real browser.
- *
- * SAFE links are forwarded immediately with no UI flash.
- * CAUTION/DANGER links show an explainable warning; DANGER requires an explicit override.
+ *  1. Checking: the link is checked on the phone and, when online, against Google Safe Browsing.
+ *  2. Safe: says so, says how it was checked, and hands the link to the user's browser a moment
+ *     later (or at once with "Open now").
+ *  3. Caution / Danger: explains every reason in plain words. "Go back" is the primary action;
+ *     opening anyway stays possible, because the user is always in charge.
  */
 class LinkGuardActivity : ComponentActivity() {
 
@@ -61,178 +95,279 @@ class LinkGuardActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         val url = intent.getStringExtra(EXTRA_URL)
             ?: intent.dataString
             ?: run { finish(); return }
 
-        val verdict = LinkScanner.scan(url)
-
-        // Fast path: verified-safe links open with zero friction.
-        if (verdict.level == LinkScanner.RiskLevel.SAFE) {
-            forwardToBrowser(url)
-            finish()
-            return
-        }
-
         setContent {
             ChittiTheme {
-                WarningScreen(
-                    verdict = verdict,
-                    onGoBack = { finish() },
-                    onProceed = {
-                        forwardToBrowser(url)
-                        finish()
-                    }
+                LinkGuardScreen(
+                    url = url,
+                    browserLabel = BrowserRouter.preferredBrowser(this)?.label,
+                    onOpen = { forward(url) },
+                    onGoBack = { finish() }
                 )
             }
         }
     }
 
-    /** Opens the URL in an external app, never looping back into LinkGuard itself. */
-    private fun forwardToBrowser(url: String) {
-        val uri = Uri.parse(url)
-        val view = Intent(Intent.ACTION_VIEW, uri)
-        val isWeb = uri.scheme.equals("http", ignoreCase = true) ||
-            uri.scheme.equals("https", ignoreCase = true)
-        val self = ComponentName(this, LinkGuardActivity::class.java)
+    // "Open now" can be tapped while the automatic hand-off is pending: open the link once.
+    private var forwarded = false
 
-        // Visible candidates only (Android 11+ package-visibility filtering applies here);
-        // drop ourselves to avoid an intent loop.
-        val candidates = packageManager.queryIntentActivities(view, PackageManager.MATCH_ALL)
-            .map { it.activityInfo }
-            .filter { it.packageName != packageName }
-
-        try {
-            when {
-                candidates.size == 1 -> {
-                    startActivity(
-                        Intent(view).setComponent(ComponentName(candidates[0].packageName, candidates[0].name))
-                    )
-                }
-                candidates.isEmpty() && !isWeb -> {
-                    // Non-web schemes (upi:, tel:, mailto:, ...) can never resolve back to
-                    // LinkGuard (its filter is http/https only), and startActivity() is not
-                    // subject to package-visibility filtering, so just fire it.
-                    startActivity(view)
-                }
-                else -> {
-                    // Multiple visible handlers, or a web URL whose handlers are hidden from us:
-                    // the system chooser resolves in the system process (no visibility filter);
-                    // exclude ourselves so it cannot loop back.
-                    startActivity(
-                        Intent.createChooser(view, "Open with")
-                            .putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, arrayOf(self))
-                    )
-                }
-            }
-        } catch (e: ActivityNotFoundException) {
+    private fun forward(url: String) {
+        if (forwarded || isFinishing) return
+        forwarded = true
+        if (BrowserRouter.open(this, url) == null) {
             Toast.makeText(this, "No app available to open this link", Toast.LENGTH_SHORT).show()
+        }
+        finish()
+    }
+}
+
+/** How long a safe verdict stays on screen before the browser opens: long enough to read. */
+private const val SAFE_HOLD_MS = 1400L
+
+@Composable
+private fun LinkGuardScreen(
+    url: String,
+    browserLabel: String?,
+    onOpen: () -> Unit,
+    onGoBack: () -> Unit
+) {
+    val colors = Chitti.colors
+    val haptics = rememberHaptics()
+    var verdict by remember { mutableStateOf<LinkChecker.Verdict?>(null) }
+    val context = LocalContext.current
+
+    LaunchedEffect(url) {
+        val v = LinkChecker.check(context, url)
+        verdict = v
+        when (v.level) {
+            LinkScanner.RiskLevel.SAFE -> {
+                haptics.confirm()
+                delay(SAFE_HOLD_MS)
+                onOpen()
+            }
+            LinkScanner.RiskLevel.CAUTION -> haptics.threshold()
+            LinkScanner.RiskLevel.DANGER -> haptics.reject()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.background)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+    ) {
+        AnimatedContent(
+            targetState = verdict,
+            transitionSpec = { fadeIn(Motion.fade(200)) togetherWith fadeOut(Motion.fade(120)) },
+            label = "linkVerdict"
+        ) { v ->
+            if (v == null) Checking(url) else Result(v, browserLabel, onOpen, onGoBack)
         }
     }
 }
 
 @Composable
-private fun WarningScreen(
-    verdict: LinkScanner.LinkVerdict,
-    onGoBack: () -> Unit,
-    onProceed: () -> Unit
-) {
-    val danger = verdict.level == LinkScanner.RiskLevel.DANGER
-    val accent = if (danger) Chitti.colors.danger else Chitti.colors.warning
-    val icon = if (danger) Icons.Filled.GppBad else Icons.Filled.GppMaybe
-    val headline = if (danger) "Dangerous link blocked" else "Open this link carefully"
-    val sub = if (danger)
-        "Chitti's on-device scan flagged this link as a likely scam or phishing attempt."
-    else
-        "This link has some warning signs. Check the details before continuing."
+private fun Checking(url: String) {
+    val colors = Chitti.colors
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = Space.xxl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        LatticeLoader(status = LatticeStatus.WORKING, label = "Checking this link", color = colors.accent, fontSize = 17)
+        Spacer(Modifier.height(Space.l))
+        Text(
+            hostOf(url),
+            style = MaterialTheme.typography.titleLarge,
+            color = colors.textHigh,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+@Composable
+private fun Result(
+    v: LinkChecker.Verdict,
+    browserLabel: String?,
+    onOpen: () -> Unit,
+    onGoBack: () -> Unit
+) {
+    val colors = Chitti.colors
+    val (icon: ImageVector, tint: Color, headline: String) = when (v.level) {
+        LinkScanner.RiskLevel.SAFE -> Triple(Icons.Rounded.GppGood, colors.success, "This link looks safe")
+        LinkScanner.RiskLevel.CAUTION -> Triple(Icons.Rounded.GppMaybe, colors.warning, "Be careful with this link")
+        LinkScanner.RiskLevel.DANGER -> Triple(Icons.Rounded.GppBad, colors.danger, "This link is not safe")
+    }
+    val safe = v.level == LinkScanner.RiskLevel.SAFE
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(top = Space.xxxl, bottom = Space.xl)
+    ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Space.xxl),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(40.dp))
             Box(
-                modifier = Modifier
-                    .size(88.dp)
-                    .background(accent.copy(alpha = 0.12f), CircleShape),
+                modifier = Modifier.size(88.dp).clip(CircleShape).background(tint.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(52.dp))
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(48.dp))
             }
-            Spacer(Modifier.height(20.dp))
-            Text(headline, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Space.l))
             Text(
-                sub,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                headline,
+                style = MaterialTheme.typography.headlineMedium,
+                color = colors.textHigh,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive }
             )
+            Spacer(Modifier.height(Space.xs))
+            Text(
+                v.host.ifBlank { v.url },
+                style = MaterialTheme.typography.bodyLarge,
+                color = colors.textMid,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
 
-            Spacer(Modifier.height(20.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("LINK", style = MaterialTheme.typography.labelSmall, color = accent)
-                    Text(
-                        verdict.url,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        maxLines = 4
+        // What was checked, and what each check found.
+        InsetGroup(
+            header = if (safe) "How Chitti checked it" else "Why Chitti stopped it",
+            footer = checkedFooter(v)
+        ) {
+            if (safe) {
+                row("local", Inset.iconInset) {
+                    InsetRow(
+                        title = "No warning signs",
+                        subtitle = "Checked on this phone: the address, the domain and known scam patterns",
+                        icon = Icons.Rounded.CheckCircle,
+                        iconTint = colors.success
                     )
-                    Spacer(Modifier.height(12.dp))
-                    Text("WHY CHITTI FLAGGED IT", style = MaterialTheme.typography.labelSmall, color = accent)
-                    Spacer(Modifier.height(4.dp))
-                    verdict.reasons.forEach { reason ->
-                        Row(Modifier.padding(vertical = 3.dp)) {
-                            Text("•  ", color = accent)
-                            Text(reason, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Filled.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "Scanned fully on-device · risk score ${verdict.score}/100",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                row("google", Inset.iconInset) { GoogleRow(v.google) }
+            } else {
+                v.reasons.forEachIndexed { i, reason ->
+                    // "Claim: what it means" reads as a bold line and an explanation under it.
+                    val claim = reason.substringBefore(": ", reason).trimEnd('.')
+                    val detail = reason.substringAfter(": ", "").takeIf { it.isNotBlank() }?.replaceFirstChar { it.uppercase() }
+                    row("reason-$i", Inset.iconInset) {
+                        InsetRow(
+                            title = claim,
+                            subtitle = detail,
+                            titleLines = Int.MAX_VALUE,
+                            subtitleLines = Int.MAX_VALUE,
+                            icon = if (i == 0 && v.level == LinkScanner.RiskLevel.DANGER) Icons.Rounded.GppBad else Icons.Rounded.Warning,
+                            iconTint = if (v.level == LinkScanner.RiskLevel.DANGER) colors.danger else colors.warning
                         )
                     }
                 }
+                if (v.google != LinkChecker.GoogleStatus.Listed) {
+                    row("google", Inset.iconInset) { GoogleRow(v.google, stopped = true) }
+                }
             }
+        }
 
-            Spacer(Modifier.height(28.dp))
-            Button(
-                onClick = onGoBack,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = CircleShape
-            ) {
-                Text("Go back — keep me safe", fontWeight = FontWeight.SemiBold)
-            }
-            Spacer(Modifier.height(10.dp))
-            TextButton(onClick = onProceed, modifier = Modifier.fillMaxWidth()) {
+        InsetGroup(header = "The full link") {
+            row("url") {
                 Text(
-                    if (danger) "I understand the risk, open anyway" else "Continue to site",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    v.url,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textMid,
+                    modifier = Modifier.padding(horizontal = Inset.textInset, vertical = Space.m)
                 )
             }
-            Spacer(Modifier.height(16.dp))
+        }
+
+        Spacer(Modifier.height(Space.xxl))
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Space.gutter),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (safe) {
+                PrimaryButton(text = "Open now" + (browserLabel?.let { " in $it" } ?: ""), onClick = onOpen)
+                Spacer(Modifier.height(Space.xs))
+                Text(
+                    "Opening automatically…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textMid
+                )
+                LinkButton(text = "Cancel", onClick = onGoBack)
+            } else {
+                PrimaryButton(text = "Go back", onClick = onGoBack)
+                Spacer(Modifier.height(Space.s))
+                if (v.level == LinkScanner.RiskLevel.DANGER) {
+                    LinkButton(text = "I understand the risk, open anyway", color = colors.danger, onClick = onOpen)
+                } else {
+                    SecondaryButton(text = "Open anyway", onClick = onOpen)
+                }
+            }
         }
     }
 }
+
+@Composable
+private fun GoogleRow(status: LinkChecker.GoogleStatus, stopped: Boolean = false) {
+    val colors = Chitti.colors
+    when (status) {
+        // On a stopped link a green tick would read as a contradiction: say what it means instead.
+        LinkChecker.GoogleStatus.NotListed if stopped -> InsetRow(
+            title = "Not on Google's list yet",
+            subtitle = "New scam sites are often not listed yet. Chitti caught this one on the phone.",
+            subtitleLines = Int.MAX_VALUE,
+            icon = Icons.Rounded.Info,
+            iconTint = colors.textMid
+        )
+        LinkChecker.GoogleStatus.NotListed -> InsetRow(
+            title = "Not on Google's unsafe list",
+            subtitle = "Google Safe Browsing does not list this page as phishing or malware",
+            icon = Icons.Rounded.CheckCircle,
+            iconTint = colors.success
+        )
+        LinkChecker.GoogleStatus.Listed -> InsetRow(
+            title = "On Google's unsafe list",
+            icon = Icons.Rounded.GppBad,
+            iconTint = colors.danger
+        )
+        LinkChecker.GoogleStatus.Offline -> InsetRow(
+            title = "Google check unavailable",
+            subtitle = "No connection, so only the on-phone check ran",
+            icon = Icons.Rounded.Info,
+            iconTint = colors.textMid
+        )
+        LinkChecker.GoogleStatus.NotConfigured -> InsetRow(
+            title = "Google check not set up",
+            subtitle = "Only the on-phone check ran",
+            icon = Icons.Rounded.Info,
+            iconTint = colors.textMid
+        )
+        LinkChecker.GoogleStatus.NotApplicable -> InsetRow(
+            title = "Checked on this phone",
+            subtitle = "Google only checks web links",
+            icon = Icons.Rounded.Info,
+            iconTint = colors.textMid
+        )
+    }
+}
+
+private fun checkedFooter(v: LinkChecker.Verdict): String = when (v.google) {
+    LinkChecker.GoogleStatus.Listed, LinkChecker.GoogleStatus.NotListed ->
+        "Checked on this phone and with Google Safe Browsing. Only the link was sent to Google, nothing else."
+    else -> "Checked on this phone. Nothing was sent anywhere."
+}
+
+private fun hostOf(url: String): String =
+    runCatching { android.net.Uri.parse(url).host }.getOrNull()?.removePrefix("www.") ?: url

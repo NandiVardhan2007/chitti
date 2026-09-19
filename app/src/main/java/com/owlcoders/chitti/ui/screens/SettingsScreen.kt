@@ -12,6 +12,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.GppGood
+import androidx.compose.material.icons.rounded.OpenInBrowser
+import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Mic
@@ -22,6 +26,7 @@ import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +41,8 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.owlcoders.chitti.security.BrowserRouter
+import com.owlcoders.chitti.security.SafeBrowsingClient
 import com.owlcoders.chitti.ui.components.Avatar
 import com.owlcoders.chitti.ui.components.Inset
 import com.owlcoders.chitti.ui.components.InsetRow
@@ -97,6 +104,11 @@ fun SettingsScreen(
     val listener = remember(refresh) { NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName) }
     val mic = remember(refresh) { context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED }
     val calendar = remember(refresh) { context.checkSelfPermission(android.Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED }
+    val linkOpener = remember(refresh) { BrowserRouter.isLinkOpener(context) }
+    val browsers = remember(refresh) { BrowserRouter.installedBrowsers(context) }
+    var safeBrowser by remember(refresh) { mutableStateOf(BrowserRouter.preferredBrowser(context)) }
+    var pickingBrowser by remember { mutableStateOf(false) }
+    val roleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { refresh++ }
 
     fun openAppInfo() {
         try {
@@ -155,6 +167,48 @@ fun SettingsScreen(
             }
             row("calendar", Inset.iconInset) {
                 PermissionRow("Calendar", "Add what it finds to your calendar", Icons.Rounded.CalendarMonth, calendar) { request(android.Manifest.permission.WRITE_CALENDAR) }
+            }
+        }
+
+        insetSection(
+            key = "links",
+            header = "Links",
+            footer = "When on, every link you tap in any app opens in Chitti first. It checks the link on this phone and with Google Safe Browsing, opens safe links in your browser, and tells you why when a link is unsafe. Only the link is sent to Google."
+        ) {
+            row("guard", Inset.iconInset) {
+                InsetRow(
+                    title = "Check links before they open",
+                    icon = Icons.Rounded.GppGood,
+                    iconTint = if (linkOpener) colors.accent else colors.textMid,
+                    value = if (linkOpener) "On" else null,
+                    // Handing the role back is done in Android's default-apps screen.
+                    onClick = {
+                        roleLauncher.launch(
+                            if (linkOpener) BrowserRouter.defaultAppsSettingsIntent() else BrowserRouter.becomeLinkOpenerIntent(context)
+                        )
+                    },
+                    trailing = if (linkOpener) null else {
+                        { LinkButton(text = "Turn on", onClick = { roleLauncher.launch(BrowserRouter.becomeLinkOpenerIntent(context)) }) }
+                    }
+                )
+            }
+            row("browser", Inset.iconInset) {
+                InsetRow(
+                    title = "Open safe links in",
+                    icon = Icons.Rounded.OpenInBrowser,
+                    iconTint = colors.info,
+                    value = safeBrowser?.label ?: "No browser found",
+                    chevron = browsers.size > 1,
+                    onClick = if (browsers.size > 1) ({ pickingBrowser = true }) else null
+                )
+            }
+            row("google", Inset.iconInset) {
+                InsetRow(
+                    title = "Google Safe Browsing",
+                    icon = Icons.Rounded.Public,
+                    iconTint = colors.success,
+                    value = if (SafeBrowsingClient.isConfigured) "On" else "Not set up"
+                )
             }
         }
 
@@ -220,6 +274,34 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (pickingBrowser) {
+        AlertDialog(
+            onDismissRequest = { pickingBrowser = false },
+            shape = MaterialTheme.shapes.extraLarge,
+            containerColor = colors.surface,
+            title = { Text("Open safe links in", style = MaterialTheme.typography.titleLarge, color = colors.textHigh) },
+            text = {
+                Column {
+                    browsers.forEach { b ->
+                        InsetRow(
+                            title = b.label,
+                            onClick = {
+                                BrowserRouter.setPreferredBrowser(context, b.packageName)
+                                safeBrowser = b
+                                haptics.tick()
+                                pickingBrowser = false
+                            },
+                            trailing = if (b.packageName == safeBrowser?.packageName) {
+                                { androidx.compose.material3.Icon(Icons.Rounded.Check, contentDescription = "Selected", tint = colors.accent) }
+                            } else null
+                        )
+                    }
+                }
+            },
+            confirmButton = { LinkButton(text = "Done", onClick = { pickingBrowser = false }) }
+        )
     }
 
     val pending = confirm

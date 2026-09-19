@@ -243,6 +243,7 @@ fun InsetRow(
     destructive: Boolean = false,
     enabled: Boolean = true,
     subtitleLines: Int = 2,
+    titleLines: Int = 2,
     onClick: (() -> Unit)? = null,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable RowScope.() -> Unit)? = null
@@ -293,7 +294,7 @@ fun InsetRow(
             Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor, textAlign = TextAlign.Center)
         } else {
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor, maxLines = titleLines, overflow = TextOverflow.Ellipsis)
                 if (subtitle != null) {
                     Text(
                         subtitle,

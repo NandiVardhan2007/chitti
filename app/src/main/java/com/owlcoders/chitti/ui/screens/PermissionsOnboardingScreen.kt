@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Accessibility
+import androidx.compose.material.icons.rounded.GppGood
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -40,6 +41,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.owlcoders.chitti.security.BrowserRouter
 import com.owlcoders.chitti.services.ChittiAccessibilityService
 import com.owlcoders.chitti.ui.components.Inset
 import com.owlcoders.chitti.ui.components.InsetRow
@@ -69,16 +71,19 @@ fun PermissionsOnboardingScreen(
     var hasAccessibility by remember { mutableStateOf(checkAccessibilityPermission(context)) }
     // Optional here, but required on Android 13+ for reminders and LinkGuard alerts.
     var hasPostNotifications by remember { mutableStateOf(checkPostNotificationsPermission(context)) }
+    var checksLinks by remember { mutableStateOf(BrowserRouter.isLinkOpener(context)) }
 
     fun refresh() {
         hasMic = checkMicPermission(context)
         hasNotification = checkNotificationPermission(context)
         hasAccessibility = checkAccessibilityPermission(context)
         hasPostNotifications = checkPostNotificationsPermission(context)
+        checksLinks = BrowserRouter.isLinkOpener(context)
     }
 
     val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasMic = it }
     val postLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasPostNotifications = it }
+    val roleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { refresh() }
 
     // Listener and accessibility grants happen in system Settings; re-check on return.
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -124,12 +129,21 @@ fun PermissionsOnboardingScreen(
                 }
             }
         }
-        if (Build.VERSION.SDK_INT >= 33) {
-            insetSection(key = "optional", header = "Optional", footer = "For reminders and warnings about suspicious links.") {
+        insetSection(
+            key = "optional",
+            header = "Optional",
+            footer = "Notifications carry reminders and link warnings. Link checking makes every link you tap open in Chitti first, so unsafe ones are stopped before they load."
+        ) {
+            if (Build.VERSION.SDK_INT >= 33) {
                 row("post", Inset.iconInset) {
                     GrantRow("Show notifications", null, Icons.Rounded.NotificationsActive, hasPostNotifications) {
                         postLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
+                }
+            }
+            row("links", Inset.iconInset) {
+                GrantRow("Check links before they open", "Stops scam and phishing links", Icons.Rounded.GppGood, checksLinks) {
+                    roleLauncher.launch(BrowserRouter.becomeLinkOpenerIntent(context))
                 }
             }
         }

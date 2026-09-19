@@ -23,7 +23,7 @@
     <!-- SMS (Optional) -->
     <uses-permission android:name="android.permission.SEND_SMS"/>
 
-    <!-- Internet (Optional, for Cartesia) -->
+    <!-- Internet: only for Google Safe Browsing link checks. Everything else runs on the phone. -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <uses-feature android:name="android.hardware.telephony" android:required="false"/>
@@ -86,7 +86,8 @@
             android:exported="true"
             android:label="Chitti LinkGuard"
             android:excludeFromRecents="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            android:taskAffinity=""
+            android:theme="@style/Theme.Chitti">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

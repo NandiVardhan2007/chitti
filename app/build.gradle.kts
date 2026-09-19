@@ -1,9 +1,16 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
+}
+
+// Secrets live in local.properties (git-ignored), never in source.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
 }
 
 android {
@@ -16,6 +23,14 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        // Google Safe Browsing key, restricted in Cloud Console to this package + signing SHA-1.
+        // Blank when absent: LinkGuard then checks links on the device only.
+        buildConfigField(
+            "String",
+            "SAFE_BROWSING_API_KEY",
+            "\"${localProperties.getProperty("SAFE_BROWSING_API_KEY", "")}\""
+        )
     }
 
     buildTypes {
@@ -33,6 +48,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

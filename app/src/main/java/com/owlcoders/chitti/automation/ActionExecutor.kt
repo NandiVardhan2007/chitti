@@ -114,9 +114,9 @@ class ActionExecutor(
     }
 
     private fun openDeepLink(url: String): ActionResult {
-        // LinkGuard: every URL is scanned on-device before it is allowed to open.
-        // SAFE links pass straight through inside LinkGuardActivity with no UI;
-        // risky links show the warning interstitial instead of opening blindly.
+        // LinkGuard checks every URL (on the phone, plus Google Safe Browsing when online) and
+        // either hands it to the browser or explains why it is unsafe. The local verdict here is
+        // only for the action log.
         val verdict = LinkScanner.scan(url)
         LinkGuardActivity.open(context, url)
         return if (verdict.level == LinkScanner.RiskLevel.SAFE) {

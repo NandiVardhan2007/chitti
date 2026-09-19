@@ -23,7 +23,7 @@ object LinkGuardNotifier {
     private const val TAG = "LinkGuardNotifier"
     private const val CHANNEL_ID = "chitti_linkguard"
 
-    fun showDangerAlert(context: Context, url: String, verdict: LinkScanner.LinkVerdict) {
+    fun showDangerAlert(context: Context, url: String, verdict: LinkChecker.Verdict) {
         // API 33+: posting without POST_NOTIFICATIONS throws SecurityException. The runtime
         // request lives in onboarding; here we only guard and explain why nothing was shown.
         if (Build.VERSION.SDK_INT >= 33 &&
@@ -60,11 +60,11 @@ object LinkGuardNotifier {
         val topReason = verdict.reasons.firstOrNull() ?: "Suspicious link detected"
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
-            .setContentTitle("⚠️ Suspicious link in your messages")
+            .setContentTitle("Unsafe link in your messages")
             .setContentText(topReason)
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("$topReason\n\n$url\n\nTap to see the full on-device analysis.")
+                    .bigText("$topReason\n\n$url\n\nTap to see why.")
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)

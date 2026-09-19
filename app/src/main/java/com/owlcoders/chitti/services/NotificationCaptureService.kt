@@ -9,6 +9,7 @@ import com.owlcoders.chitti.ChittiApp
 import com.owlcoders.chitti.db.CapturedEvent
 import com.owlcoders.chitti.db.entities.NotificationEntity
 import com.owlcoders.chitti.db.entities.Task
+import com.owlcoders.chitti.security.LinkChecker
 import com.owlcoders.chitti.security.LinkGuardNotifier
 import com.owlcoders.chitti.security.LinkScanner
 import kotlinx.coroutines.CoroutineScope
@@ -113,10 +114,11 @@ class NotificationCaptureService : NotificationListenerService() {
         // STEP 3.5: LinkGuard — scan any URLs in the message, warn on danger
         try {
             for (url in LinkScanner.extractUrls(text)) {
-                val verdict = LinkScanner.scan(url)
+                // On-device check, plus Google Safe Browsing when online.
+                val verdict = LinkChecker.check(applicationContext, url)
                 if (verdict.level == LinkScanner.RiskLevel.DANGER) {
                     LinkGuardNotifier.showDangerAlert(applicationContext, url, verdict)
-                    Log.w(TAG, "LinkGuard flagged dangerous URL: $url (${verdict.score})")
+                    Log.w(TAG, "LinkGuard flagged dangerous URL: $url (local ${verdict.localScore}, google ${verdict.google})")
                 }
             }
         } catch (e: Exception) {
