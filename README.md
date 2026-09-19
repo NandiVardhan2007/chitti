@@ -1,226 +1,111 @@
-# 🤖 Chitti - 100% On-Device AI Personal Assistant
+# Chitti
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-1.9.22-purple.svg?style=flat&logo=kotlin)](https://kotlinlang.org)
-[![Android](https://img.shields.io/badge/Platform-Android%2014%20(API%2034)-green.svg?style=flat&logo=android)](https://developer.android.com)
-[![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose%20%2B%20Material%203-blue.svg?style=flat&logo=jetpackcompose)](https://developer.android.com/jetpack/compose)
-[![Database](https://img.shields.io/badge/Database-Room%20(SQLite)-orange.svg?style=flat&logo=sqlite)](https://developer.android.com/training/data-storage/room)
-[![Local LLM](https://img.shields.io/badge/On--Device%20LLM-Google%20Gemma%202B%20(MediaPipe)-red.svg?style=flat&logo=google)](https://ai.google.dev/gemma)
-[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline%20%7C%20Zero%20Cloud-success.svg?style=flat)](#zero-cloud-privacy)
+**An AI assistant that lives on your Android phone, not in the cloud.**
 
-> **iQOO Hackathon | Productivity & On-Device AI Track**  
-> Built with passion by **Owl Coders**.
+Chitti reads the notifications that arrive on your phone, works out what actually needs you, and keeps it
+on a single Today list. You can ask it things by voice or text, and it answers with Google's Gemma 2B model
+running on the phone itself.
 
----
+Built by **Owl Coders** for the iQOO Hackathon 2026.
+[Download the latest APK](https://github.com/NandiVardhan2007/chitti/releases/latest)
 
-## 🌟 Executive Summary
+<p>
+  <img src="docs/screenshots/login.jpg" width="200" alt="Sign in">
+  <img src="docs/screenshots/today.jpg" width="200" alt="Today">
+  <img src="docs/screenshots/ask.jpg" width="200" alt="Ask">
+  <img src="docs/screenshots/voice.jpg" width="200" alt="Voice">
+</p>
 
-**Chitti** is an Android-first, privacy-native, purely on-device autonomous personal secretary that **sees → understands → remembers → acts** on notifications, messages, documents, flyers, voice, and user requests without ever transmitting sensitive personal data to the cloud.
+## What it does
 
-Modern users receive hundreds of notifications daily across messaging apps, payment alerts, college portals, and emails. Important deadlines, meetings, and financial commitments get buried under noise. Chitti intercepts these notifications locally, deduplicates them, extracts actionable information (title, date/time, context, urgency), stores them in a structured local knowledge graph, and triggers whitelisted Android system actions (calendar invites, exact alarms, SMS drafting, and deep links).
+- **Today.** Commitments pulled out of your notifications, urgent ones first, with one-tap reply, calendar and
+  reminder actions, and a log of what Chitti did for you.
+- **Ask.** Type or talk. Chitti answers questions about you from the facts you saved ("what is my branch?"),
+  sets reminders ("remind me to call mom in 30 minutes"), tells you what's pending, controls the flashlight,
+  opens apps, and answers general questions with the on-device model.
+- **Voice.** Tap the mic and speak. Chitti shows the transcript as you talk and answers aloud.
+- **Library.** Everything Chitti found in your notifications, and the facts you taught it.
+- **Link checking.** Links you open can go through Chitti first, which checks them on the phone and with
+  Google Safe Browsing, then opens safe ones in your browser.
+- **Personal details.** ID documents are scanned and parsed on the phone and kept in an encrypted vault
+  behind your fingerprint. Chitti can fill them into forms through Android Autofill.
+- **Encrypted backup.** An optional backup, end-to-end encrypted with a password only you know.
 
----
+## Privacy
 
-## 🚀 Key Highlights & Architectural Pillars
+- The language model, speech recognition and notification processing all run on the phone.
+- The network is used only for sign-in (Firebase Authentication), the optional backup (the server stores
+  ciphertext only; see [`backend/`](backend/README.md)) and Safe Browsing link checks (only the link is sent).
+- You can clear any kind of stored data, or all of it, from Settings. App lock can require your fingerprint.
 
-### 1. 🛡️ 100% Offline & Zero Cloud
-All inference and processing run strictly on the device hardware:
-- Local LLM inference powered by **Google Gemma 1.1 2B (INT4 CPU quantized)** via Google MediaPipe GenAI.
-- Built-in **Ultra-fast Rule & Regex Fallback Engine** ensuring zero-dependency execution (<10ms) even before model weights are loaded.
-- Zero network permissions required for core AI extraction. Your private conversations, OTPs, and financial receipts never leave your phone.
+## Project layout
 
-### 2. ⚡ Autonomous Action Registry (17 Whitelisted System Actions)
-Chitti does not stop at extraction—it can act autonomously or semi-autonomously through a strictly defined and secure action engine:
-1. `CREATE_REMINDER` - Schedules exact alarms via Android `AlarmManager` with customizable notification buffers.
-2. `CREATE_CALENDAR_EVENT` - Integrates directly with Android `CalendarContract.Events`.
-3. `DRAFT_MESSAGE` & `SEND_MESSAGE` - Drafts pre-filled responses or sends SMS (with mandatory runtime user confirmation).
-4. `OPEN_APP` & `OPEN_DEEP_LINK` - Resolves launcher packages and custom URLs.
-5. `SHARE_TEXT` - Triggers native Android share sheet chooser.
-6. `SEARCH_FILES` - Queries local indexed documents and media.
-7. `TOGGLE_FLASHLIGHT` - Hardware utility control via `CameraManager`.
-8. `START_VOICE_INPUT` - Launches on-device speech transcription.
-9. `SHOW_OCR_RESULTS` - Formats and displays text extracted from scanned flyers/documents.
-10. `SET_PRIORITY`, `MARK_DONE`, `SNOOZE`, `DELETE_TASK` - Full task lifecycle management.
-11. `ADD_TO_MEMORY` & `QUERY_MEMORY` - Upserts and searches long-term personal context.
+| Path | What's there |
+| --- | --- |
+| `app/src/main/java/com/owlcoders/chitti/` | The Android app |
+| `  ui/` | Jetpack Compose screens, the component kit and the theme |
+| `  services/` | Notification capture, extraction (Gemma via MediaPipe, with a rule-based fallback), speech in and out |
+| `  automation/` | The intent dispatcher and the whitelisted actions Chitti may perform |
+| `  db/` | Room database and DAOs |
+| `  security/` | App lock, the encrypted vault, link checking |
+| `  account/`, `backup/` | Sign-in and the end-to-end encrypted backup |
+| `  documents/` | ID document scanning and parsing |
+| `backend/` | Node 22 / Express 5 service for accounts and encrypted backups |
+| `branding/` | Logo and icon assets |
+| `.github/workflows/` | CI and signed APK releases |
 
-### 3. 🔍 Smart Deduplication & Urgency Engine
-- **SHA-256 Fingerprinting**: Eliminates spam and rapid redundant notifications over a sliding 5-minute temporal window.
-- **Weighted Urgency Scorer**: Analyzes cues for financial alerts (UPI, bills, fees), time-sensitive deadlines ("tomorrow", "by 5 PM"), and priority contacts to assign automated priority scores (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
+## Building
 
-### 4. 🧠 Long-Term Memory & Offline RAG
-Chitti maintains a structured personal knowledge base in local Room storage (`college`, `branch`, `project`, `person`, `note`). During chat conversations and action resolution, Chitti dynamically pulls contextual memories to provide tailored, hyper-relevant responses.
+**Requirements:** JDK 17 or newer, the Android SDK (compile SDK 37), and a phone running Android 8.0 (API 26) or later.
+The project uses Android Gradle Plugin 9.4, Kotlin 2.4 and Jetpack Compose.
 
-### 5. 🔬 Built-in AI Performance Lab & Simulator
-Designed specifically for hackathon evaluation:
-- Live on-device latency benchmarking.
-- Hardware profiling (SoC detection, RAM availability).
-- Synthetic notification stream generator with multi-lingual test fixtures (English, Hinglish, Telugu-English).
-
----
-
-## 🏛️ System Architecture
-
-```mermaid
-flowchart TD
-    subgraph Ingestion Layer
-        A1[NotificationListenerService] -->|Raw Notification| B1[Deduplication Engine<br/>SHA-256 Hash]
-        A2[Document & Flyer Scanner] -->|Camera / SAF Picker| B2[OCR Text Extraction]
-        A3[Voice & Chat Input] -->|Audio / Text| B3[Intent Parsing]
-    end
-
-    subgraph Intelligence & Scoring
-        B1 --> C1{Urgency & Noise Filter}
-        C1 -->|Noise / Duplicate| DROP[Discarded]
-        C1 -->|Actionable| D1[Dual-Path Extraction Engine]
-        B2 --> D1
-        B3 --> D1
-        
-        D1 -->|Primary Path| E1[Gemma 2B INT4<br/>MediaPipe GenAI]
-        D1 -->|Fallback Path| E2[Rule & Regex Engine<br/>Sub-10ms Latency]
-    end
-
-    subgraph Storage Layer [Room SQLite Database]
-        E1 & E2 --> DB[(AppDatabase)]
-        DB --> F1[Tasks & Deadlines]
-        DB --> F2[Captured Events]
-        DB --> F3[Structured Memory]
-        DB --> F4[Automation Audit Logs]
-    end
-
-    subgraph Presentation & Action
-        DB --> G1[Jetpack Compose UI<br/>9 Dynamic Screens]
-        G1 --> H1[Action Registry & Executor]
-        H1 -->|Permission Checker| I1[System Actions]
-        I1 --> J1[AlarmManager]
-        I1 --> J2[CalendarContract]
-        I1 --> J3[SmsManager / Share]
-        I1 --> J4[Camera / Torch]
-    end
-```
-
----
-
-## 📱 Screen Tour (9 Jetpack Compose Views)
-
-| Screen | Description |
-| :--- | :--- |
-| 📌 **Today Desk** | Skeuomorphic desk pad with interactive sticky notes, priority tags, and 1-tap quick actions (Calendar, Reminder, Smart Reply). |
-| 💬 **Chat Assistant** | Multi-turn offline assistant with local RAG context injection, voice input, and persistent conversation history. |
-| 📥 **Inbox** | Filterable feed of raw and processed notifications with priority badges and batch operations. |
-| 📊 **Dashboard** | Comprehensive telemetry: tasks completed, urgency distribution, category breakdown, and action statistics. |
-| 🧪 **AI Lab** | Real-time benchmarking sandbox: latency profiling, hardware specs, and synthetic notification simulation. |
-| ⚡ **Automations** | Complete audit trail of system actions taken, with status badges (`SUCCESS`, `FAILED`, `CANCELLED`). |
-| 📄 **Documents** | File manager with Storage Access Framework (SAF) integration, OCR text viewer, and local file search. |
-| 🧠 **Memory** | Personal knowledge graph for storing college details, team members, projects, and personal notes. |
-| ⚙️ **Settings** | Privacy matrix, granular storage wiping (wipe chat, purge logs, or full reset), and model info. |
-
----
-
-## 🗄️ Database Schema (11 Room Entities)
-
-The persistence layer is implemented via Android Room with 11 relational tables:
-1. `Task`: Core task model with title, description, priority, category, and completion status.
-2. `CapturedEvent`: Extracted notification event with raw text, extracted fields, and processing state.
-3. `Deadline`: Precise timestamp, location, and alert rules.
-4. `Reminder`: Alarm triggers, repeat rules (`daily`, `weekly`, `none`), and alert buffers.
-5. `Commitment`: Interpersonal promises tracking (`promiseTo`, `promiseText`).
-6. `CalendarEvent`: Calendar synchronization records.
-7. `NotificationEntity`: Raw notification archive with SHA-256 fingerprint.
-8. `Document`: File metadata, indexed text, and OCR outputs.
-9. `Memory`: Long-term key-value personal context store.
-10. `Person`: Extracted contacts, relations, and interaction timestamps.
-11. `AutomationHistory`: Immutable audit log of every system trigger.
-
----
-
-## 🛠️ Build & Setup Instructions
-
-### Prerequisites
-* **Android Studio Hedgehog** (or newer / Koala / Ladybug)
-* **Android SDK 34** (Java 17)
-* Physical Android Device with USB Debugging enabled (Tested on Motorola Edge 50 Pro, 8GB+ RAM recommended for Gemma model)
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/NandiVardhan2007/chitti.git
-cd chitti
-```
-
-### 2. Setup Gemma 2B Model (Optional for LLM Mode)
-Chitti works out-of-the-box using its built-in rule engine. To enable the deep LLM extraction pipeline:
-1. Download `gemma-1.1-2b-it-cpu-int4.bin` from Kaggle:  
-   [Google Gemma MediaPipe Models on Kaggle](https://www.kaggle.com/models/google/gemma/tfLite/gemma-1.1-2b-it-cpu-int4)
-2. Push the model directly to the device temporary directory:
+1. Clone the repository.
+   ```bash
+   git clone https://github.com/NandiVardhan2007/chitti.git
+   cd chitti
+   ```
+2. Create `local.properties` with your SDK path and app configuration. This file is never committed.
+   ```properties
+   sdk.dir=/path/to/Android/Sdk
+   FIREBASE_API_KEY=...
+   FIREBASE_APP_ID=...
+   FIREBASE_PROJECT_ID=...
+   GOOGLE_WEB_CLIENT_ID=...      # optional: shows "Continue with Google"
+   BACKEND_URL=...               # optional: enables encrypted backup
+   SAFE_BROWSING_API_KEY=...     # optional: enables online link checks
+   ```
+   Debug builds without the Firebase keys show a "skip" option on the sign-in screen.
+3. (Optional) Put the Gemma model on the phone for on-device answers. Chitti falls back to its rule-based
+   engine without it.
    ```bash
    adb push gemma-1.1-2b-it-cpu-int4.bin /data/local/tmp/gemma.bin
    ```
+   The model is available from [Kaggle](https://www.kaggle.com/models/google/gemma/tfLite/gemma-1.1-2b-it-cpu-int4).
+4. Build and install.
+   ```bash
+   ./gradlew :app:installDebug          # Windows: .\gradlew.bat :app:installDebug
+   ./gradlew :app:testDebugUnitTest     # unit tests
+   ```
 
-### 3. Build & Install via Gradle
-Build the debug APK directly:
-```bash
-# Windows
-.\gradlew.bat assembleDebug
+On first launch, Chitti asks for the microphone, notification access and accessibility, which it needs to
+listen, read what arrives and act for you.
 
-# Linux / macOS
-./gradlew assembleDebug
-```
+## Versions and releases
 
-Install to connected device:
-```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-
-### 4. Permissions Setup
-On first launch:
-1. Tap **Enable Notification Access** and toggle **Chitti** ON.
-2. Tap **Preview Mode** to immediately explore all 9 screens with pre-loaded mock scenarios.
-3. Grant optional permissions when prompted (Camera for OCR, Alarms for Reminders, Calendar for Event sync).
-
-### 5. Versions & Releases
 - The version lives in one place: `chitti.versionName` in `gradle.properties` (`MAJOR.MINOR.PATCH`).
   `versionCode` is derived from it (`MAJOR*10000 + MINOR*100 + PATCH`), so it always goes up.
-- **CI** (`.github/workflows/ci.yml`) runs the app's unit tests, a debug build and the backend tests on
-  every push to `main` and every pull request.
-- **Releases** (`.github/workflows/release.yml`): bump `chitti.versionName`, commit it on `main`, then
+- **CI** (`.github/workflows/ci.yml`) runs the unit tests, a debug build and the backend tests on every push
+  to `main` and on every pull request.
+- **Releases** (`.github/workflows/release.yml`): bump `chitti.versionName`, commit it on `main`, then push a
+  matching tag.
   ```bash
-  git tag v1.1.0
-  git push origin v1.1.0
+  git tag v1.0.2
+  git push origin v1.0.2
   ```
-  The workflow checks the tag matches the version and is on `main`, builds the APK signed with the
-  release key, checks the certificate, and publishes `chitti-v1.1.0.apk` (plus its SHA-256) as a
-  GitHub Release.
-- The release key and app config come from repository secrets (listed at the top of `release.yml`).
-  Locally they sit in `local.properties`, which is never committed. Debug builds are signed with the
-  release key when it's present, so every build carries the same certificate fingerprint.
+  The workflow checks that the tag matches the version and is on `main`, builds the APK signed with the
+  release key, verifies the certificate, and publishes `chitti-v1.0.2.apk` with its SHA-256 as a GitHub Release.
+- The release key and app configuration come from repository secrets (listed at the top of `release.yml`).
 
----
+## Team
 
-## 🧪 Testing with the AI Lab Simulator
-
-1. Launch Chitti and navigate to **Menu (⋮) → AI Lab**.
-2. Select a synthetic test scenario:
-   - **Assignment Deadline**: *"Submit Cloud Computing Lab Assignment 3 by Friday 5 PM on Google Classroom."*
-   - **Meeting Alert**: *"Quick standup tomorrow at 10 AM on Google Meet."*
-   - **Telugu-English**: *"Repu 10 AM ki hackathon PPT ready cheyali!"*
-   - **Hinglish**: *"Kal subah 11 baje college project presentation hai."*
-3. Tap **Simulate Notification** or **Run Benchmark**.
-4. Observe real-time extraction latency, extracted fields, and auto-generated task cards on the **Today Desk**!
-
----
-
-## 🔒 Security & Privacy Manifesto
-
-- **Zero Outbound Telemetry**: Chitti does not make any external network requests for processing or analytics.
-- **Granular Data Purging**: Clear conversation logs, memory records, or complete databases at any time via Settings.
-- **Sensitive Guardrails**: High-risk actions (e.g., sending SMS messages) mandate explicit user confirmation dialogs before execution.
-
----
-
-## 👥 Contributors
-
-Built by **Owl Coders** for the **iQOO Hackathon**:
-- **Nandi Vardhan** - Lead Developer & Architecture
-
----
-
-## 📄 License
-This project is developed for hackathon evaluation and licensed under the [Apache 2.0 License](LICENSE).
+**Owl Coders**: Nandi Vardhan (lead developer).

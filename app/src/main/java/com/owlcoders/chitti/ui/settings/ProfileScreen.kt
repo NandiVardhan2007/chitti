@@ -25,6 +25,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Badge
 import androidx.compose.material.icons.rounded.CreditCard
@@ -35,7 +36,6 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Password
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PictureAsPdf
-import androidx.compose.material.icons.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -107,7 +107,7 @@ import java.util.Locale
 fun DocumentKind.icon(): ImageVector = when (this) {
     DocumentKind.AADHAAR -> Icons.Rounded.Fingerprint
     DocumentKind.PAN -> Icons.Rounded.CreditCard
-    DocumentKind.RATION -> Icons.Rounded.ReceiptLong
+    DocumentKind.RATION -> Icons.AutoMirrored.Rounded.ReceiptLong
     DocumentKind.BIRTH -> Icons.Rounded.Badge
     DocumentKind.OTHER -> Icons.Rounded.Description
 }
@@ -332,7 +332,7 @@ private fun PersonalDetailsContent(noScreenLock: Boolean, onOpenDocument: (Long)
             row("ration", Inset.iconInset) {
                 InsetRow(
                     title = "Ration card",
-                    icon = Icons.Rounded.ReceiptLong,
+                    icon = Icons.AutoMirrored.Rounded.ReceiptLong,
                     iconTint = colors.success,
                     value = identity.rationCardNumber.ifBlank { "Not added" }
                 )

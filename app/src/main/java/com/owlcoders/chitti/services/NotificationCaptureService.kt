@@ -22,7 +22,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Enhanced NotificationListenerService per plan.md §2.2.
+ * The notification listener that feeds Chitti.
  * Flow: SEE → PREPROCESS → CLASSIFY → EXTRACT → SCORE → DEDUP → STORE → ACT
  */
 class NotificationCaptureService : NotificationListenerService() {
@@ -165,7 +165,7 @@ class NotificationCaptureService : NotificationListenerService() {
                 )
             )
 
-            // Also save to tasks table per plan.md §8
+            // Also save it to the tasks table
             app.database.taskDao().insertTask(
                 Task(
                     title = extracted.what,

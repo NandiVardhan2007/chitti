@@ -131,7 +131,7 @@ fun SwipeActionBox(
                         val commit = action != null && abs(projected) >= threshold() && !reversing
                         armed = false
                         scope.launch {
-                            if (commit && action != null) {
+                            if (commit) {
                                 haptics.confirm()
                                 if (action.removes) {
                                     offset.animateTo(sign(projected) * widthPx * 1.15f, Motion.standard(), initialVelocity = v)

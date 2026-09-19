@@ -34,7 +34,8 @@ abstract class AppDatabase : RoomDatabase() {
     // Legacy DAO (kept for backward compatibility)
     abstract fun eventDao(): CapturedEventDao
 
-    // New DAOs per plan.md §8
+    // Everything else Chitti stores: tasks, memory, captured notifications, people, the action
+    // log, chat, the profile, reminders and ID documents
     abstract fun taskDao(): TaskDao
     abstract fun memoryDao(): MemoryDao
     abstract fun notificationDao(): NotificationDao

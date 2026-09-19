@@ -13,8 +13,7 @@ import org.json.JSONObject
 /**
  * Intelligent Extraction Engine for Chitti.
  * Uses on-device Gemma LLM via MediaPipe GenAI when available,
- * with a high-accuracy, low-latency regex/rule-based NLP fallback
- * per plan.md §2.2, §7, and §14.
+ * with a high-accuracy, low-latency regex/rule-based NLP fallback.
  *
  * Safety notes:
  *  - MediaPipe enforces `prompt_tokens < maxTokens` with a native RET_CHECK that aborts the
@@ -185,7 +184,7 @@ class ExtractionEngine(private val context: Context, modelPath: String = "/data/
     }
 
     /**
-     * Fast, lightweight, offline rule-based entity extractor per plan.md §2.2 & §7.
+     * Fast, lightweight, offline rule-based entity extractor.
      * Handles English, Telugu-English code-mix, and Hinglish.
      */
     fun ruleBasedExtract(text: String): ExtractedData? = ruleBased(text)

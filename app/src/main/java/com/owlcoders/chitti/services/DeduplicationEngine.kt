@@ -3,7 +3,7 @@ package com.owlcoders.chitti.services
 import java.security.MessageDigest
 
 /**
- * Deduplication engine per plan.md §2.2 step 7.
+ * Deduplication engine: the step of the capture pipeline that drops repeats.
  * Checks recent events (last 5 min) by source + hash of task+time.
  */
 object DeduplicationEngine {

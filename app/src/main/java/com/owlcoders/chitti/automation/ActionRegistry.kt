@@ -3,7 +3,7 @@ package com.owlcoders.chitti.automation
 import android.Manifest
 
 /**
- * All 17 whitelisted Android actions from plan.md §9.
+ * The whitelisted Android actions Chitti may perform.
  * Each action has permission requirements, confirmation requirements, and a description.
  */
 @android.annotation.SuppressLint("InlinedApi")

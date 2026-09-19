@@ -1,7 +1,7 @@
 package com.owlcoders.chitti.services
 
 /**
- * Importance scoring per plan.md §2.2 step 6.
+ * Importance scoring: the step of the capture pipeline that ranks what needs you.
  * Weighted sum of: deadline proximity, financial impact, urgency keywords.
  */
 object ImportanceScorer {

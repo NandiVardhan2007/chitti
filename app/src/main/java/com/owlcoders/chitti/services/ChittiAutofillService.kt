@@ -124,6 +124,7 @@ class ChittiAutofillService : AutofillService() {
                 this, fields.hashCode(), intent,
                 PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_MUTABLE
             ).intentSender
+            @Suppress("DEPRECATION") // the Presentations overload needs API 33; minSdk is 26
             val dataset = Dataset.Builder(presentation).apply {
                 @Suppress("DEPRECATION")
                 fields.keys.forEach { setValue(it, null) }
@@ -138,6 +139,7 @@ class ChittiAutofillService : AutofillService() {
         val presentation = RemoteViews(packageName, android.R.layout.simple_list_item_1).apply {
             setTextViewText(android.R.id.text1, "Chitti · fill your details")
         }
+        @Suppress("DEPRECATION") // the Presentations overload needs API 33; minSdk is 26
         val builder = Dataset.Builder(presentation)
         var any = false
         fields.forEach { (id, key) ->

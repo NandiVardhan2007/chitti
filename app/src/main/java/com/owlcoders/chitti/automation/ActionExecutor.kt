@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
- * Executes whitelisted Android actions from plan.md §9.
+ * Executes the whitelisted Android actions in [ActionRegistry].
  * All actions go through permission checking, optional confirmation, execution, and audit logging.
  */
 class ActionExecutor(

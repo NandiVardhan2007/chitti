@@ -53,6 +53,7 @@ class AutofillUnlockActivity : FragmentActivity() {
             val presentation = RemoteViews(packageName, android.R.layout.simple_list_item_1).apply {
                 setTextViewText(android.R.id.text1, "Chitti")
             }
+            @Suppress("DEPRECATION") // the Presentations overload needs API 33; minSdk is 26
             val builder = Dataset.Builder(presentation)
             var any = false
             ids.zip(keys).forEach { (id, key) ->

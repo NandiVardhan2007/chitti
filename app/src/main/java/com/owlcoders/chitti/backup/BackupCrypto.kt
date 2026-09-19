@@ -113,7 +113,7 @@ object BackupCrypto {
             }
             output.write(plain)
             if (last) break
-            pending = following!!
+            pending = following
             index++
         }
         output.flush()
