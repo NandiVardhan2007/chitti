@@ -3,6 +3,7 @@ package com.owlcoders.chitti.services
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
@@ -33,6 +34,15 @@ class TtsEngine(context: Context) : TextToSpeech.OnInitListener {
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    /**
+     * Uptime (ms) at which the engine started the latest word of the current utterance, 0 before
+     * the first. The voice overlay moves Chitti's mouth on these beats. Engines that don't report
+     * word ranges leave it at 0, and the overlay falls back to a speaking rhythm of its own.
+     */
+    @Volatile
+    var lastWordAt: Long = 0L
+        private set
+
     /** Id of the utterance we currently care about; callbacks for older (flushed) ones are ignored. */
     @Volatile
     private var currentUtteranceId: String? = null
@@ -52,6 +62,10 @@ class TtsEngine(context: Context) : TextToSpeech.OnInitListener {
             tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {
                     if (utteranceId == currentUtteranceId) isSpeaking = true
+                }
+
+                override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+                    if (utteranceId == currentUtteranceId) lastWordAt = SystemClock.uptimeMillis()
                 }
 
                 override fun onDone(utteranceId: String?) {
@@ -101,6 +115,7 @@ class TtsEngine(context: Context) : TextToSpeech.OnInitListener {
 
             val utteranceId = "ChittiResponse_${System.nanoTime()}"
             currentUtteranceId = utteranceId
+            lastWordAt = 0L
             val result = tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
             if (result != TextToSpeech.SUCCESS) {
                 Log.e(tag, "TTS speak() failed with $result")

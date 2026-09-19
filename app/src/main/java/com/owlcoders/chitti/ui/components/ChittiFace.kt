@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -74,6 +75,25 @@ fun DrawScope.drawChittiEyes(center: Offset, radius: Float, expression: FaceExpr
         val x = center.x + side * radius * 0.25f + e.lookX * radius * 0.13f
         drawPath(eyePath(x, y, w, h, center.y), color)
     }
+}
+
+/**
+ * The mouth, which exists only while Chitti talks: a rounded slot under the eyes, on the same
+ * -8 degree slant. [open] 0 is a closed line, 1 fully open; [presence] fades it in and out.
+ */
+fun DrawScope.drawChittiMouth(center: Offset, radius: Float, open: Float, presence: Float, color: Color) {
+    if (presence <= 0.01f) return
+    val o = open.coerceIn(0f, 1f)
+    val w = radius * 0.30f * (1f - 0.28f * o)
+    val h = radius * (0.055f + 0.2f * o)
+    val cy = center.y + radius * 0.4f
+    val cx = center.x + SKEW * (cy - center.y)
+    drawRoundRect(
+        color = color.copy(alpha = color.alpha * presence.coerceIn(0f, 1f)),
+        topLeft = Offset(cx - w / 2f, cy - h / 2f),
+        size = Size(w, h),
+        cornerRadius = CornerRadius(minOf(w, h) / 2f)
+    )
 }
 
 /** A capsule of [w] x [h] centred at ([cx], [cy]), slanted like the logo's eyes. */

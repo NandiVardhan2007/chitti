@@ -515,7 +515,8 @@ class MainActivity : FragmentActivity() {
                             onStopSpeech = {
                                 tts.stop()
                                 voiceState = VoiceAssistantState.RESULT
-                            }
+                            },
+                            lastWordAt = { tts.lastWordAt }
                         )
 
                         if (locked && signedIn && !showSplash) {

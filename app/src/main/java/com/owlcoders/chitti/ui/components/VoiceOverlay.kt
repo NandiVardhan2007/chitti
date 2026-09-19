@@ -1,5 +1,11 @@
 package com.owlcoders.chitti.ui.components
 
+import kotlin.math.abs
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Size
+import androidx.compose.runtime.mutableLongStateOf
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
@@ -46,7 +52,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -67,7 +72,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.owlcoders.chitti.automation.AssistantResponse
 import com.owlcoders.chitti.ui.theme.Chitti
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -106,7 +110,9 @@ fun VoiceOverlay(
     assistantResponse: AssistantResponse?,
     onMicClick: () -> Unit,
     onDismiss: () -> Unit,
-    onStopSpeech: () -> Unit
+    onStopSpeech: () -> Unit,
+    /** Uptime of the latest spoken word, for Chitti's mouth. See TtsEngine.lastWordAt. */
+    lastWordAt: () -> Long = { 0L }
 ) {
     val visible = state != VoiceAssistantState.IDLE
     BackHandler(enabled = visible, onBack = onDismiss)
@@ -258,8 +264,9 @@ fun VoiceOverlay(
                 state = state,
                 level = rmsLevel,
                 succeeded = assistantResponse?.actionSuccess == true,
+                lastWordAt = lastWordAt,
                 onClick = onMicClick,
-                modifier = Modifier.size(168.dp)
+                modifier = Modifier.size(232.dp)
             )
 
             Spacer(Modifier.height(Space.l))
@@ -312,53 +319,56 @@ private fun Transcript(text: String, final: Boolean) {
 }
 
 /**
- * One continuous form that breathes with the voice. Its outline is a circle displaced by a few
- * slow sine waves; the microphone level (smoothed by a spring, so it has weight) sets how far
- * the outline swells and moves. Thinking turns the waves faster and quieter; with no level at all
- * the form pulses slowly. Under reduced motion it is a still circle whose size follows the level.
- * Tapping it listens again.
+ * Chitti, live. One continuous form that breathes with the voice: its outline is a circle
+ * displaced by a few slow sine waves, and the microphone level (smoothed by a spring, so it has
+ * weight) sets how far it swells. Around it, what Chitti is doing, drawn:
+ *
+ *  - listening: rings leave the body, stronger as your voice gets louder; the eyes look up at you;
+ *  - thinking: three dots orbit it and the eyes glance up and around;
+ *  - speaking: a mouth moves on the engine's word beats (or a speaking rhythm of its own when the
+ *    engine doesn't report words), the body squashes with each syllable and a ring pulses with it;
+ *  - done: a happy squint if the action went through, a downcast look if it didn't.
+ *
+ * It floats above a soft shadow the whole time. Under reduced motion everything holds still and
+ * only the size follows the level. Tapping it listens again.
  */
 @Composable
 private fun VoiceForm(
     state: VoiceAssistantState,
     level: Float,
     succeeded: Boolean,
+    lastWordAt: () -> Long,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = Chitti.colors
     val reduce = rememberReducedMotion()
     val listening = state == VoiceAssistantState.LISTENING
-    val voice by animateFloatAsState(
-        targetValue = if (listening) level.coerceIn(0f, 1f) else 0f,
-        animationSpec = Motion.standard(),
-        label = "voiceLevel"
-    )
+    val thinking = state == VoiceAssistantState.THINKING
+    val speaking = state == VoiceAssistantState.SPEAKING
+    val done = state == VoiceAssistantState.RESULT || speaking
+
+    val voice by animateFloatAsState(if (listening) level.coerceIn(0f, 1f) else 0f, Motion.standard(), label = "voiceLevel")
     val scale by animateFloatAsState(
         targetValue = when (state) {
             VoiceAssistantState.LISTENING -> 1f
-            VoiceAssistantState.THINKING -> 0.82f
-            else -> 0.9f
+            VoiceAssistantState.THINKING -> 0.86f
+            else -> 0.92f
         },
         animationSpec = Motion.gentle(),
         label = "formScale"
     )
+    val listenW by animateFloatAsState(if (listening) 1f else 0f, Motion.standard(), label = "listenW")
+    val thinkW by animateFloatAsState(if (thinking) 1f else 0f, Motion.standard(), label = "thinkW")
+    val talkW by animateFloatAsState(if (speaking) 1f else 0f, Motion.standard(), label = "talkW")
+    val happy by animateFloatAsState(if (succeeded && done) 1f else 0f, Motion.standard(), label = "happy")
+    val sorry by animateFloatAsState(if (!succeeded && state == VoiceAssistantState.RESULT) 1f else 0f, Motion.standard(), label = "sorry")
 
-    val happy by animateFloatAsState(
-        targetValue = if (succeeded && (state == VoiceAssistantState.RESULT || state == VoiceAssistantState.SPEAKING)) 1f else 0f,
-        animationSpec = Motion.standard(),
-        label = "happy"
-    )
+    // When speech started, so beats from an earlier answer aren't mistaken for this one.
+    var speakingSince by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(speaking) { if (speaking) speakingSince = SystemClock.uptimeMillis() }
 
-    // A clock for the waves, read only inside draw so it costs a redraw, not a recomposition.
-    val clock = remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(reduce) {
-        if (reduce) return@LaunchedEffect
-        val start = withFrameNanos { it }
-        while (isActive) {
-            withFrameNanos { now -> clock.floatValue = (now - start) / 1_000_000_000f }
-        }
-    }
+    val clock = rememberChittiClock(running = !reduce)
 
     val interaction = remember { MutableInteractionSource() }
     Canvas(
@@ -368,12 +378,77 @@ private fun VoiceForm(
             .semantics { contentDescription = if (listening) "Listening. Tap to start again" else "Tap to speak" }
     ) {
         val t = clock.floatValue
-        val speed = if (state == VoiceAssistantState.THINKING) 2.2f else 1f
-        // Slow idle pulse (~2.6s cycle) when there is no level to follow.
-        val idle = if (listening) 0f else 0.035f * (0.5f + 0.5f * sin(t * 2f * PI.toFloat() / 2.6f))
-        val amp = if (reduce) 0f else 0.05f + 0.20f * voice + idle
-        val base = size.minDimension / 2f * 0.72f * scale * (1f + if (reduce) 0.25f * voice else 0f)
-        val c = Offset(size.width / 2f, size.height / 2f)
+        val accent = colors.accentFill
+
+        // ---- the mouth: word beats when the engine gives them, a rhythm of its own otherwise
+        val mouth = if (reduce || talkW <= 0.01f) 0f else {
+            val beat = lastWordAt()
+            val open = if (beat > 0L && beat >= speakingSince) {
+                val since = (SystemClock.uptimeMillis() - beat) / 1000f
+                // Two syllables per word, then the mouth settles until the next word.
+                if (since > 0.44f) 0f else abs(sin(since / 0.22f * PI.toFloat())) * (1f - since / 0.6f)
+            } else {
+                abs(sin(t * 9.5f)) * (0.55f + 0.45f * sin(t * 2.3f)).coerceAtLeast(0.15f)
+            }
+            open * talkW
+        }
+
+        val base = size.minDimension / 2f * 0.5f * scale * (1f + if (reduce) 0.25f * voice else 0f)
+        val bob = if (reduce) 0f else idleBob(t) * base * 0.8f - mouth * base * 0.04f
+        val c = Offset(size.width / 2f, size.height / 2f + bob)
+
+        // ---- shadow on the "floor": smaller and fainter the higher Chitti floats
+        val floorY = size.height / 2f + base * 1.34f
+        val lift = (-bob / base).coerceIn(-0.1f, 0.1f)
+        val sw = base * (1.25f - lift * 1.5f)
+        drawOval(
+            brush = Brush.radialGradient(
+                listOf(colors.shadow.copy(alpha = colors.shadow.alpha * (0.9f - lift * 2f)), Color.Transparent),
+                center = Offset(size.width / 2f, floorY),
+                radius = sw
+            ),
+            topLeft = Offset(size.width / 2f - sw, floorY - sw * 0.16f),
+            size = Size(sw * 2f, sw * 0.32f)
+        )
+
+        // ---- listening rings: they leave the body and fade; the voice makes them stronger
+        if (listenW > 0.01f && !reduce) {
+            for (i in 0 until 3) {
+                val p = ((t / 1.9f) + i / 3f) % 1f
+                val r = base * (1.08f + 0.8f * p)
+                val a = (1f - p) * (1f - p) * (0.16f + 0.55f * voice) * listenW
+                drawCircle(accent.copy(alpha = a), r, c, style = Stroke(width = base * (0.02f + 0.03f * (1f - p))))
+            }
+        }
+        // ---- speaking ring: pulses with the mouth
+        if (talkW > 0.01f && !reduce) {
+            drawCircle(
+                accent.copy(alpha = 0.28f * mouth),
+                base * (1.1f + 0.22f * mouth),
+                c,
+                style = Stroke(width = base * 0.035f)
+            )
+        }
+        // ---- thinking: three dots in orbit, brighter as they pass in front
+        if (thinkW > 0.01f && !reduce) {
+            for (i in 0 until 3) {
+                val a = t * 2.6f + i * 2f * PI.toFloat() / 3f
+                val orbit = base * 1.32f
+                val dot = base * 0.075f * (0.75f + 0.25f * sin(t * 4f + i))
+                drawCircle(
+                    accent.copy(alpha = thinkW * (0.55f + 0.45f * (0.5f + 0.5f * sin(a)))),
+                    dot,
+                    Offset(c.x + orbit * cos(a), c.y + orbit * 0.42f * sin(a))
+                )
+            }
+        }
+
+        // ---- the body: wobbles with the voice, squashes with each syllable
+        val speed = if (thinking) 2.2f else 1f
+        val idlePulse = if (listening) 0f else 0.03f * (0.5f + 0.5f * sin(t * 2f * PI.toFloat() / 2.6f))
+        val amp = if (reduce) 0f else 0.04f + 0.2f * voice + idlePulse + 0.03f * mouth
+        val sx = 1f - 0.025f * mouth
+        val sy = 1f + 0.05f * mouth
         val path = Path()
         val steps = 96
         for (i in 0..steps) {
@@ -382,26 +457,27 @@ private fun VoiceForm(
                 0.3f * sin(5f * a - t * 1.7f * speed) +
                 0.2f * sin(2f * a + t * 0.9f * speed)
             val r = base * (1f + amp * wave)
-            val x = c.x + r * cos(a)
-            val y = c.y + r * sin(a)
+            val x = c.x + r * cos(a) * sx
+            val y = c.y + r * sin(a) * sy
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
         drawChittiBody(c, base, colors, outline = path)
 
-        // Expression, from the eyes alone: a blink every few seconds, a glance from side to side
-        // while thinking, eyes a little wider as the voice gets louder, a happy squint when an
-        // action went through.
-        val blinkPhase = t % 4.2f
-        val blink = if (reduce || blinkPhase > 0.18f) 1f else 1f - 0.9f * sin(blinkPhase / 0.18f * PI.toFloat())
+        // ---- the eyes: idle life underneath, the state on top
+        val idle = if (reduce) FaceExpression() else idleExpression(t)
+        val glance = if (reduce) 0f else 0.7f * sin(t * 2.4f)
+        val idleShare = (1f - listenW - thinkW - sorry).coerceAtLeast(0f)
         drawChittiEyes(
             c, base,
             FaceExpression(
-                eyeOpen = blink * (1f + 0.12f * voice),
-                lookX = if (!reduce && state == VoiceAssistantState.THINKING) 0.7f * sin(t * 2.4f) else 0f,
-                squint = happy
+                eyeOpen = idle.eyeOpen * (1f + 0.14f * voice) * (1f - 0.15f * sorry),
+                lookX = idle.lookX * idleShare + glance * thinkW,
+                lookY = idle.lookY * idleShare - 0.3f * listenW - 0.55f * thinkW + 0.45f * sorry,
+                squint = maxOf(happy, 0.2f * mouth)
             ),
             colors.onAccent
         )
+        drawChittiMouth(c, base, mouth, talkW, colors.onAccent)
     }
 }

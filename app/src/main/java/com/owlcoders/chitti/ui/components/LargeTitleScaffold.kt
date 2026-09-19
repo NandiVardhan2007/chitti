@@ -64,6 +64,7 @@ private val NavBarHeight = 52.dp
  *
  * [actions] live in the bar at all times (they are controls, not content).
  * [bottomBar] (Ask's composer) floats above the tab bar; content is padded to clear it.
+ * Chitti floats faintly behind the content, so space the rows don't fill isn't a void.
  */
 @Composable
 fun LargeTitleScaffold(
@@ -92,6 +93,9 @@ fun LargeTitleScaffold(
     }
 
     Box(modifier = modifier.fillMaxSize().background(colors.background)) {
+        // Chitti sits behind the content, outside the glass source: it never reaches the bars, and
+        // keeping it out means its motion doesn't make the bars re-blur the page every frame.
+        ChittiAmbient(lift = { progress })
         LazyColumn(
             state = listState,
             modifier = Modifier

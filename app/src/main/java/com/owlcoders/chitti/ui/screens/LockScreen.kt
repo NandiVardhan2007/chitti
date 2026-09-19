@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +25,7 @@ import androidx.fragment.app.FragmentActivity
 import com.owlcoders.chitti.security.AppLock
 import com.owlcoders.chitti.security.SecureScreen
 import com.owlcoders.chitti.security.findActivity
+import com.owlcoders.chitti.ui.components.LiveChittiFace
 import com.owlcoders.chitti.ui.components.PrimaryButton
 import com.owlcoders.chitti.ui.components.Space
 import com.owlcoders.chitti.ui.theme.Chitti
@@ -58,8 +56,9 @@ fun LockScreen(onUnlocked: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Rounded.Lock, contentDescription = null, tint = colors.accent, modifier = Modifier.size(44.dp))
-        Spacer(Modifier.height(Space.m))
+        // Chitti asleep while the app is locked; it opens its eyes when you unlock.
+        LiveChittiFace(eyesShut = true, modifier = Modifier.size(96.dp))
+        Spacer(Modifier.height(Space.l))
         Text("Chitti is locked", style = MaterialTheme.typography.headlineMedium, color = colors.textHigh, textAlign = TextAlign.Center)
         Spacer(Modifier.height(Space.xs))
         Text("Unlock with your fingerprint, face or screen lock.", style = MaterialTheme.typography.bodyMedium, color = colors.textMid, textAlign = TextAlign.Center)
