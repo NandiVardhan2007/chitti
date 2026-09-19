@@ -12,6 +12,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.CloudUpload
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.runtime.rememberCoroutineScope
+import com.owlcoders.chitti.backup.BackupManager
+import com.owlcoders.chitti.security.AppLock
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.GppGood
 import androidx.compose.material.icons.rounded.OpenInBrowser
@@ -80,10 +88,15 @@ private const val DeveloperTaps = 7
 @Composable
 fun SettingsScreen(
     profileName: String?,
+    accountEmail: String?,
+    accountProvider: String,
     counts: StoredCounts,
     clear: ClearActions,
     onOpenProfile: () -> Unit,
-    onOpenLab: () -> Unit
+    onOpenBackup: () -> Unit,
+    onOpenLab: () -> Unit,
+    onSignOut: (() -> Unit)?,
+    onDeleteAccount: (suspend () -> String?)?
 ) {
     val context = LocalContext.current
     val colors = Chitti.colors
@@ -92,6 +105,12 @@ fun SettingsScreen(
     var developer by remember { mutableStateOf(prefs.getBoolean("developer_unlocked", false)) }
     var versionTaps by remember { mutableIntStateOf(0) }
     var confirm by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
+    var appLock by remember { mutableStateOf(AppLock.isEnabled(context)) }
+    var lockAfter by remember { mutableStateOf(AppLock.lockAfterMs(context)) }
+    var confirmSignOut by remember { mutableStateOf(false) }
+    var confirmDeleteAccount by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     // Permission state is re-read whenever the screen resumes (e.g. back from system Settings).
     var refresh by remember { mutableIntStateOf(0) }
@@ -101,6 +120,7 @@ fun SettingsScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    val lockAvailable = remember(refresh) { AppLock.isAvailable(context) }
     val listener = remember(refresh) { NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName) }
     val mic = remember(refresh) { context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED }
     val calendar = remember(refresh) { context.checkSelfPermission(android.Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED }
@@ -139,12 +159,77 @@ fun SettingsScreen(
         insetSection(key = "profile") {
             row("profile", separatorInset = Inset.iconInset) {
                 InsetRow(
-                    title = profileName?.takeIf { it.isNotBlank() } ?: "Your details",
-                    subtitle = "Name, contact and address for filling forms",
-                    leading = { Avatar(initial = profileName, size = 44.dp, fallback = Icons.Rounded.Person) },
+                    title = profileName?.takeIf { it.isNotBlank() } ?: accountEmail ?: "Your account",
+                    subtitle = accountEmail?.let { "$it · $accountProvider" } ?: "Not signed in",
+                    leading = { Avatar(initial = profileName ?: accountEmail, size = 44.dp, fallback = Icons.Rounded.Person) }
+                )
+            }
+            row("personal", separatorInset = Inset.iconInset) {
+                InsetRow(
+                    title = "Personal details",
+                    subtitle = "ID documents and details for autofill",
+                    icon = Icons.Rounded.Badge,
+                    iconTint = colors.accent,
                     chevron = true,
                     onClick = onOpenProfile
                 )
+            }
+            row("backup", separatorInset = Inset.iconInset) {
+                val last = remember(refresh) { BackupManager.status(context).lastBackupAt }
+                InsetRow(
+                    title = "Backup",
+                    subtitle = "End-to-end encrypted",
+                    icon = Icons.Rounded.CloudUpload,
+                    iconTint = colors.info,
+                    value = if (last == 0L) "Never" else relativeTime(last),
+                    chevron = true,
+                    onClick = onOpenBackup
+                )
+            }
+        }
+
+        insetSection(
+            key = "security",
+            header = "Security",
+            footer = if (lockAvailable)
+                "Personal details always ask for your fingerprint. App lock also asks when you open Chitti."
+            else
+                "Set a screen lock on your phone (PIN, pattern or fingerprint) to use app lock."
+        ) {
+            row("applock", Inset.iconInset) {
+                InsetRow(
+                    title = "App lock",
+                    icon = Icons.Rounded.Lock,
+                    iconTint = colors.accent,
+                    enabled = lockAvailable,
+                    trailing = {
+                        androidx.compose.material3.Switch(
+                            checked = appLock,
+                            enabled = lockAvailable,
+                            onCheckedChange = { on ->
+                                AppLock.setEnabled(context, on)
+                                appLock = on
+                                haptics.tick()
+                            }
+                        )
+                    }
+                )
+            }
+            if (appLock) {
+                row("lockafter", Inset.iconInset) {
+                    InsetRow(
+                        title = "Lock",
+                        icon = Icons.Rounded.Timer,
+                        iconTint = colors.textMid,
+                        value = lockAfterLabel(lockAfter),
+                        chevron = true,
+                        onClick = {
+                            val next = when (lockAfter) { 0L -> 60_000L; 60_000L -> 300_000L; else -> 0L }
+                            AppLock.setLockAfterMs(context, next)
+                            lockAfter = next
+                        }
+                    )
+                }
             }
         }
 
@@ -267,6 +352,13 @@ fun SettingsScreen(
             }
         }
 
+        if (onSignOut != null || onDeleteAccount != null) {
+            insetSection(key = "account", footer = "Deleting your account erases your backup from the server. What's on this phone stays until you uninstall Chitti.") {
+                if (onSignOut != null) row("signout") { InsetRow(title = "Sign out", destructive = true, onClick = { confirmSignOut = true }) }
+                if (onDeleteAccount != null) row("delete") { InsetRow(title = "Delete account", destructive = true, onClick = { confirmDeleteAccount = true }) }
+            }
+        }
+
         if (developer) {
             insetSection(key = "developer", header = "Developer", footer = "Run a notification through the extractor and see what it pulls out.") {
                 row("lab", Inset.iconInset) {
@@ -301,6 +393,43 @@ fun SettingsScreen(
                 }
             },
             confirmButton = { LinkButton(text = "Done", onClick = { pickingBrowser = false }) }
+        )
+    }
+
+    if (confirmSignOut && onSignOut != null) {
+        AlertDialog(
+            onDismissRequest = { confirmSignOut = false },
+            shape = MaterialTheme.shapes.extraLarge,
+            containerColor = colors.surface,
+            title = { Text("Sign out?", style = MaterialTheme.typography.titleLarge, color = colors.textHigh) },
+            text = { Text("Your data stays on this phone. Sign in again to back it up.", style = MaterialTheme.typography.bodyMedium, color = colors.textMid) },
+            confirmButton = { LinkButton(text = "Sign out", color = colors.danger, style = MaterialTheme.typography.titleLarge, onClick = { confirmSignOut = false; onSignOut() }) },
+            dismissButton = { LinkButton(text = "Cancel", onClick = { confirmSignOut = false }) }
+        )
+    }
+
+    if (confirmDeleteAccount && onDeleteAccount != null) {
+        AlertDialog(
+            onDismissRequest = { confirmDeleteAccount = false },
+            shape = MaterialTheme.shapes.extraLarge,
+            containerColor = colors.surface,
+            title = { Text("Delete your account?", style = MaterialTheme.typography.titleLarge, color = colors.textHigh) },
+            text = {
+                Text(
+                    deleteError ?: "Your account and your encrypted backup are erased from the server. This can't be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (deleteError != null) colors.danger else colors.textMid
+                )
+            },
+            confirmButton = {
+                LinkButton(text = "Delete", color = colors.danger, style = MaterialTheme.typography.titleLarge, onClick = {
+                    scope.launch {
+                        val err = onDeleteAccount()
+                        if (err == null) confirmDeleteAccount = false else deleteError = err
+                    }
+                })
+            },
+            dismissButton = { LinkButton(text = "Cancel", onClick = { confirmDeleteAccount = false; deleteError = null }) }
         )
     }
 
@@ -352,6 +481,12 @@ private fun StoredRow(title: String, count: Int, onClear: () -> Unit) {
         enabled = count > 0,
         onClick = if (count > 0) onClear else null
     )
+}
+
+private fun lockAfterLabel(ms: Long): String = when (ms) {
+    0L -> "Immediately"
+    60_000L -> "After 1 minute"
+    else -> "After 5 minutes"
 }
 
 /** Walks ContextWrappers (Compose gives a ContextThemeWrapper) up to the hosting Activity. */

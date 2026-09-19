@@ -74,6 +74,7 @@ import com.owlcoders.chitti.db.entities.ChatHistoryEntity
 import com.owlcoders.chitti.db.entities.Memory
 import com.owlcoders.chitti.db.entities.NotificationEntity
 import com.owlcoders.chitti.services.TtsEngine
+import com.owlcoders.chitti.ui.components.AppMenuButton
 import com.owlcoders.chitti.ui.components.BarIconButton
 import com.owlcoders.chitti.ui.components.ChipButton
 import com.owlcoders.chitti.ui.components.Inset
@@ -233,6 +234,7 @@ fun AskScreen(
         subtitle = { LargeTitleSubtitle("Runs on this phone. Nothing leaves it.") },
         listState = listState,
         actions = {
+            AppMenuButton()
             if (ttsEngine.isSpeaking) {
                 BarIconButton(icon = Icons.AutoMirrored.Rounded.VolumeOff, contentDescription = "Stop speaking", onClick = { ttsEngine.stop() })
             }

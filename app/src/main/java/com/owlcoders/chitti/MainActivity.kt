@@ -8,7 +8,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -72,7 +72,19 @@ import com.owlcoders.chitti.ui.components.Space
 import com.owlcoders.chitti.ui.components.VoiceAssistantState
 import com.owlcoders.chitti.ui.components.VoiceOverlay
 import com.owlcoders.chitti.ui.components.rememberReducedMotion
+import com.owlcoders.chitti.account.Auth
+import com.owlcoders.chitti.account.Backend
+import com.owlcoders.chitti.account.BackupMeta
+import com.owlcoders.chitti.security.AppLock
+import com.owlcoders.chitti.ui.components.AppMenuActions
+import com.owlcoders.chitti.ui.components.LocalAppMenu
 import com.owlcoders.chitti.ui.screens.AiLabScreen
+import com.owlcoders.chitti.ui.screens.BackupScreen
+import com.owlcoders.chitti.ui.screens.LockScreen
+import com.owlcoders.chitti.ui.screens.LoginScreen
+import com.owlcoders.chitti.ui.screens.RestorePromptScreen
+import com.owlcoders.chitti.ui.settings.DocumentViewerScreen
+import androidx.compose.runtime.LaunchedEffect
 import com.owlcoders.chitti.ui.screens.AskScreen
 import com.owlcoders.chitti.ui.screens.ClearActions
 import com.owlcoders.chitti.ui.screens.FoundScreen
@@ -103,6 +115,9 @@ object Routes {
     const val SETTINGS = "today/settings"
     const val PROFILE = "today/settings/profile"
     const val LAB = "today/settings/lab"
+    const val BACKUP = "today/settings/backup"
+    const val DOCUMENT = "today/settings/profile/doc/{id}"
+    fun document(id: Long) = "today/settings/profile/doc/$id"
     const val FOUND = "library/found"
     const val KNOWS = "library/knows"
 
@@ -115,7 +130,8 @@ object Routes {
     }
 }
 
-class MainActivity : ComponentActivity() {
+// FragmentActivity (a ComponentActivity) because BiometricPrompt needs one for the app lock.
+class MainActivity : FragmentActivity() {
     private var ttsEngine: TtsEngine? = null
     private var sttManager: SpeechToTextManager? = null
 
@@ -267,6 +283,35 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(checkMicPermission(context) && checkNotificationPermission(context) && checkAccessibilityPermission(context))
                 }
 
+                // ----- Account: sign-in is required before anything else. A debug build without
+                // Firebase keys can skip, so development and demos still work.
+                val prefs = remember { context.getSharedPreferences("chitti_prefs", MODE_PRIVATE) }
+                val user by Auth.currentUser.collectAsState()
+                var debugSkipped by remember { mutableStateOf(BuildConfig.DEBUG && !Auth.isConfigured && prefs.getBoolean("debug_skip_login", false)) }
+                val signedIn = user != null || debugSkipped
+                var restoreOffer by remember { mutableStateOf<BackupMeta?>(null) }
+
+                // Once per sign-in: register with the backend, and on a fresh phone offer the backup.
+                LaunchedEffect(user?.uid) {
+                    val u = user ?: return@LaunchedEffect
+                    runCatching { Backend.upsertMe(u.displayName) }
+                    if (!prefs.getBoolean("restore_offered_${u.uid}", false)) {
+                        prefs.edit().putBoolean("restore_offered_${u.uid}", true).apply()
+                        restoreOffer = runCatching { Backend.backupMeta() }.getOrNull()
+                    }
+                }
+
+                // ----- App lock
+                var locked by remember { mutableStateOf(AppLock.appNeedsUnlock(context)) }
+
+                val menuActions = AppMenuActions(
+                    accountLabel = user?.email,
+                    onPersonalDetails = { navController.navigate(Routes.PROFILE) { launchSingleTop = true } },
+                    onBackup = { navController.navigate(Routes.BACKUP) { launchSingleTop = true } },
+                    onSettings = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
+                    onSignOut = if (user != null) ({ scope.launch { Auth.signOut(context) } }) else null
+                )
+
                 val libraryActions = remember {
                     LibraryActions(
                         onMarkHandled = { n -> scope.launch { db.notificationDao().markProcessed(n.id) } },
@@ -319,17 +364,26 @@ class MainActivity : ComponentActivity() {
                 val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 val bottomChrome = if (onboarded) navInset + TabBarBottomGap + TabBarHeight + Space.s else navInset
 
-                CompositionLocalProvider(LocalGlass provides glass, LocalBottomChrome provides bottomChrome) {
+                CompositionLocalProvider(LocalGlass provides glass, LocalBottomChrome provides bottomChrome, LocalAppMenu provides menuActions) {
                     Box(modifier = Modifier.fillMaxSize().background(Chitti.colors.background)) {
-                        if (onboarded) {
+                        val offer = restoreOffer
+                        if (!signedIn) {
+                            LoginScreen(
+                                onSignedIn = {},
+                                onSkip = if (BuildConfig.DEBUG && !Auth.isConfigured) ({
+                                    prefs.edit().putBoolean("debug_skip_login", true).apply()
+                                    debugSkipped = true
+                                }) else null
+                            )
+                        } else if (offer != null) {
+                            RestorePromptScreen(meta = offer, onDone = { restoreOffer = null })
+                        } else if (onboarded) {
                             ChittiNavHost(navController = navController) {
                                 composable(Routes.TODAY) {
                                     TodayScreen(
                                         events = events,
                                         history = history,
-                                        profileInitial = profile?.firstName,
                                         onDone = { e -> scope.launch { db.eventDao().deleteEvent(e) } },
-                                        onOpenSettings = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
                                         onOpenHistory = { navController.navigate(Routes.HISTORY) { launchSingleTop = true } }
                                     )
                                 }
@@ -360,7 +414,9 @@ class MainActivity : ComponentActivity() {
                                 composable(Routes.KNOWS) { KnowsScreen(memories = memories, categories = memoryCategories, actions = libraryActions) }
                                 composable(Routes.SETTINGS) {
                                     SettingsScreen(
-                                        profileName = profileName,
+                                        profileName = profileName ?: user?.displayName,
+                                        accountEmail = user?.email,
+                                        accountProvider = Auth.providerLabel(user),
                                         counts = StoredCounts(
                                             commitments = events.size,
                                             tasks = tasks.size,
@@ -371,10 +427,29 @@ class MainActivity : ComponentActivity() {
                                         ),
                                         clear = clearActions,
                                         onOpenProfile = { navController.navigate(Routes.PROFILE) { launchSingleTop = true } },
-                                        onOpenLab = { navController.navigate(Routes.LAB) { launchSingleTop = true } }
+                                        onOpenBackup = { navController.navigate(Routes.BACKUP) { launchSingleTop = true } },
+                                        onOpenLab = { navController.navigate(Routes.LAB) { launchSingleTop = true } },
+                                        onSignOut = if (user != null) ({ scope.launch { Auth.signOut(context) } }) else null,
+                                        onDeleteAccount = if (user != null) ({
+                                            try {
+                                                Backend.deleteMe()
+                                                Auth.deleteAccount()
+                                                Auth.signOut(context)
+                                                null
+                                            } catch (e: Exception) {
+                                                e.message ?: "Couldn't delete the account."
+                                            }
+                                        }) else null
                                     )
                                 }
-                                composable(Routes.PROFILE) { ProfileScreen() }
+                                composable(Routes.PROFILE) {
+                                    ProfileScreen(onOpenDocument = { id -> navController.navigate(Routes.document(id)) })
+                                }
+                                composable(Routes.DOCUMENT) { entry ->
+                                    val id = entry.arguments?.getString("id")?.toLongOrNull() ?: -1L
+                                    DocumentViewerScreen(documentId = id, onDeleted = { navController.popBackStack() })
+                                }
+                                composable(Routes.BACKUP) { BackupScreen() }
                                 composable(Routes.LAB) {
                                     AiLabScreen(onAddEvent = { event, task ->
                                         scope.launch {
@@ -409,6 +484,10 @@ class MainActivity : ComponentActivity() {
                                 voiceState = VoiceAssistantState.RESULT
                             }
                         )
+
+                        if (locked && signedIn) {
+                            LockScreen(onUnlocked = { locked = false })
+                        }
                     }
                 }
 
@@ -416,7 +495,11 @@ class MainActivity : ComponentActivity() {
                 val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_STOP && voiceState == VoiceAssistantState.LISTENING) cancelVoice()
+                        if (event == Lifecycle.Event.ON_STOP) {
+                            if (voiceState == VoiceAssistantState.LISTENING) cancelVoice()
+                            AppLock.onAppBackgrounded()
+                        }
+                        if (event == Lifecycle.Event.ON_START && AppLock.appNeedsUnlock(context)) locked = true
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
                     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }

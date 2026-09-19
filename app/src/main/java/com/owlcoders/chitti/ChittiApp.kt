@@ -28,6 +28,7 @@ class ChittiApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.owlcoders.chitti.account.Auth.init(this)
         appScope.launch {
             try {
                 extractionEngine = ExtractionEngine(this@ChittiApp)

@@ -76,3 +76,12 @@ package-lock.json
 
 # Tool outputs
 brag-output/
+
+# Backend (Node) - secrets and deps
+backend/node_modules/
+backend/.env
+backend/*.json.key
+**/service-account*.json
+# The root rules above ignore package.json/package-lock.json; Render's `npm ci` needs the backend's.
+!backend/package.json
+!backend/package-lock.json

@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.owlcoders.chitti.db.entities.Memory
 import com.owlcoders.chitti.db.entities.NotificationEntity
+import com.owlcoders.chitti.ui.components.AppMenuButton
 import com.owlcoders.chitti.ui.components.BarIconButton
 import com.owlcoders.chitti.ui.components.EmptyState
 import com.owlcoders.chitti.ui.components.HeaderStyle
@@ -70,6 +71,7 @@ fun LibraryScreen(
         },
         actions = {
             BarIconButton(icon = Icons.Rounded.Add, contentDescription = "Add something Chitti should know", onClick = { adding = true })
+            AppMenuButton()
         }
     ) {
         item(key = "search") {

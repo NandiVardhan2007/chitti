@@ -62,6 +62,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -503,7 +504,9 @@ fun ChittiTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Done,
     onImeAction: () -> Unit = {},
-    containerColor: Color = Chitti.colors.surfaceRaised
+    containerColor: Color = Chitti.colors.surfaceRaised,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailing: (@Composable () -> Unit)? = null
 ) {
     val colors = Chitti.colors
     Column(modifier = modifier.fillMaxWidth()) {
@@ -523,6 +526,7 @@ fun ChittiTextField(
             cursorBrush = SolidColor(colors.accent),
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
             keyboardActions = KeyboardActions(onAny = { onImeAction() }),
+            visualTransformation = visualTransformation,
             modifier = Modifier.fillMaxWidth(),
             decorationBox = { inner ->
                 Row(
@@ -544,6 +548,7 @@ fun ChittiTextField(
                         }
                         inner()
                     }
+                    trailing?.invoke()
                 }
             }
         )

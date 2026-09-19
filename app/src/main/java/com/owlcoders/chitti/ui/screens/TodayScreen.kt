@@ -1,17 +1,12 @@
 package com.owlcoders.chitti.ui.screens
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.TaskAlt
 import androidx.compose.material3.MaterialTheme
@@ -23,14 +18,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import com.owlcoders.chitti.db.CapturedEvent
 import com.owlcoders.chitti.db.entities.AutomationHistory
-import com.owlcoders.chitti.ui.components.Avatar
+import com.owlcoders.chitti.ui.components.AppMenuButton
 import com.owlcoders.chitti.ui.components.CommitmentRow
 import com.owlcoders.chitti.ui.components.CommitmentTextInset
 import com.owlcoders.chitti.ui.components.EmptyState
@@ -53,15 +45,13 @@ import java.util.Locale
  *
  * The large title carries the date above it and the live counts under it, so the screen answers
  * "how much is waiting" before any row is read. Commitments are split by state (urgent, then the
- * rest) rather than listed as one undifferentiated feed. The avatar opens Settings.
+ * rest) rather than listed as one undifferentiated feed. The menu holds Settings and the rest.
  */
 @Composable
 fun TodayScreen(
     events: List<CapturedEvent>,
     history: List<AutomationHistory>,
-    profileInitial: String?,
     onDone: (CapturedEvent) -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenHistory: () -> Unit
 ) {
     val colors = Chitti.colors
@@ -75,19 +65,7 @@ fun TodayScreen(
         title = "Today",
         eyebrow = today,
         subtitle = { TodayCounts(total = events.size, urgent = urgent.size) },
-        actions = {
-            // The way into Settings and Profile: an avatar in the bar, not a tab.
-            val interaction = remember { MutableInteractionSource() }
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onOpenSettings)
-                    .semantics { contentDescription = "Settings and profile" },
-                contentAlignment = Alignment.Center
-            ) {
-                Avatar(initial = profileInitial, size = 34.dp, fallback = Icons.Rounded.Person)
-            }
-        }
+        actions = { AppMenuButton() }
     ) {
         if (events.isEmpty()) {
             item(key = "empty") {

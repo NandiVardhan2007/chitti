@@ -106,6 +106,14 @@
             </intent-filter>
         </service>
 
+        <!-- Fingerprint step before autofilling ID numbers (Aadhaar / PAN / ration card). -->
+        <activity
+            android:name=".services.AutofillUnlockActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <service
             android:name=".services.ChittiAutofillService"
             android:label="Chitti Autofill"
