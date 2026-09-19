@@ -22,6 +22,12 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.PhoneAuthOptions
+import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.auth.FirebaseAuthMissingActivityForRecaptchaException
+import com.google.firebase.FirebaseException
+import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.owlcoders.chitti.BuildConfig
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +48,7 @@ suspend fun <T> Task<T>.await(): T = suspendCancellableCoroutine { cont ->
 class AuthError(message: String) : Exception(message)
 
 /**
- * Accounts: Firebase Authentication with Google and email/password.
+ * Accounts: Firebase Authentication with Google, email/password and phone number (SMS code).
  *
  * Firebase is configured from local.properties (never committed), so a build without it still
  * runs; [isConfigured] tells the sign-in screen to say so. Passwords go straight to Firebase over
@@ -107,6 +113,74 @@ object Auth {
         return firebase { requireAuth().signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await().user!! }
     }
 
+    /** Where a phone sign-in stands after asking Firebase to verify the number. */
+    sealed interface PhoneStep {
+        /** An SMS code was sent; call [confirmPhoneCode] with it. */
+        class CodeSent(val verificationId: String, val resendToken: PhoneAuthProvider.ForceResendingToken) : PhoneStep
+        /** Android verified the number by itself (instant verification or auto-read SMS). */
+        data object SignedIn : PhoneStep
+    }
+
+    /**
+     * Starts phone sign-in for [phoneE164] (e.g. +919876543210). Firebase sends the SMS; on many
+     * phones the code is read automatically and this returns [PhoneStep.SignedIn]. An SMS that is
+     * read after the code screen is showing still signs the user in, through the auth listener.
+     */
+    suspend fun startPhoneSignIn(
+        activity: android.app.Activity,
+        phoneE164: String,
+        resend: PhoneAuthProvider.ForceResendingToken? = null
+    ): PhoneStep {
+        val a = requireAuth()
+        return suspendCancellableCoroutine { cont ->
+            val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+                override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                    a.signInWithCredential(credential)
+                        .addOnSuccessListener { if (cont.isActive) cont.resume(PhoneStep.SignedIn) }
+                        .addOnFailureListener { if (cont.isActive) cont.resumeWithException(phoneError(it)) }
+                }
+
+                override fun onVerificationFailed(e: FirebaseException) {
+                    Log.w(TAG, "Phone verification failed: ${e.javaClass.simpleName}: ${e.message}")
+                    if (cont.isActive) cont.resumeWithException(phoneError(e))
+                }
+
+                override fun onCodeSent(verificationId: String, token: PhoneAuthProvider.ForceResendingToken) {
+                    if (cont.isActive) cont.resume(PhoneStep.CodeSent(verificationId, token))
+                }
+            }
+            val options = PhoneAuthOptions.newBuilder(a)
+                .setPhoneNumber(phoneE164)
+                .setTimeout(60L, java.util.concurrent.TimeUnit.SECONDS)
+                .setActivity(activity)
+                .setCallbacks(callbacks)
+                .apply { if (resend != null) setForceResendingToken(resend) }
+                .build()
+            PhoneAuthProvider.verifyPhoneNumber(options)
+        }
+    }
+
+    suspend fun confirmPhoneCode(verificationId: String, code: String): FirebaseUser = try {
+        requireAuth().signInWithCredential(PhoneAuthProvider.getCredential(verificationId, code.trim())).await().user!!
+    } catch (e: AuthError) {
+        throw e
+    } catch (e: Exception) {
+        throw phoneError(e)
+    }
+
+    private fun phoneError(e: Exception): AuthError = when (e) {
+        is FirebaseAuthInvalidCredentialsException ->
+            if (e.errorCode == "ERROR_INVALID_VERIFICATION_CODE") AuthError("That code isn't right. Check the SMS and try again.")
+            else AuthError("That phone number doesn't look right.")
+        is FirebaseTooManyRequestsException -> AuthError("Too many attempts from this phone. Try again later, or use email.")
+        is FirebaseAuthMissingActivityForRecaptchaException -> AuthError("Couldn't verify this phone. Please try again.")
+        is FirebaseAuthException -> {
+            Log.w(TAG, "Phone auth error ${e.errorCode}: ${e.message}")
+            AuthError("Couldn't verify the number. Please try again.")
+        }
+        else -> AuthError("No connection. Check your internet and try again.")
+    }
+
     suspend fun signInWithEmail(email: String, password: String): FirebaseUser =
         firebase { requireAuth().signInWithEmailAndPassword(email.trim(), password).await().user!! }
 
@@ -133,6 +207,7 @@ object Auth {
     fun providerLabel(u: FirebaseUser?): String = when {
         u == null -> ""
         u.providerData.any { it.providerId == GoogleAuthProvider.PROVIDER_ID } -> "Google"
+        u.providerData.any { it.providerId == PhoneAuthProvider.PROVIDER_ID } -> "Phone"
         else -> "Email"
     }
 

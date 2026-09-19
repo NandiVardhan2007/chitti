@@ -21,11 +21,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Phone
+import androidx.compose.material.icons.rounded.Sms
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +52,7 @@ import com.owlcoders.chitti.BuildConfig
 import com.owlcoders.chitti.R
 import com.owlcoders.chitti.account.Auth
 import com.owlcoders.chitti.account.AuthError
+import com.owlcoders.chitti.security.findActivity
 import com.owlcoders.chitti.ui.components.BarIconButton
 import com.owlcoders.chitti.ui.components.ChittiTextField
 import com.owlcoders.chitti.ui.components.LinkButton
@@ -61,7 +65,8 @@ import com.owlcoders.chitti.ui.theme.Chitti
 import kotlinx.coroutines.launch
 
 /**
- * Sign-in, required before first use. Google in one tap, or email and password.
+ * Sign-in, required before first use. Google in one tap, email and password, or a phone number
+ * with an SMS code.
  * [onSkip] exists only in debug builds when Firebase isn't configured, so the app can still be
  * developed and demoed before the Firebase project is connected.
  */
@@ -72,7 +77,7 @@ fun LoginScreen(onSignedIn: () -> Unit, onSkip: (() -> Unit)?) {
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
 
-    var mode by remember { mutableIntStateOf(0) } // 0 sign in, 1 create account
+    var mode by remember { mutableIntStateOf(0) } // email: 0 sign in, 1 create account
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -80,6 +85,19 @@ fun LoginScreen(onSignedIn: () -> Unit, onSkip: (() -> Unit)?) {
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var info by remember { mutableStateOf<String?>(null) }
+
+    var method by remember { mutableIntStateOf(0) } // 0 email, 1 phone
+    var phone by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
+    var verificationId by remember { mutableStateOf<String?>(null) }
+    var resendToken by remember { mutableStateOf<com.google.firebase.auth.PhoneAuthProvider.ForceResendingToken?>(null) }
+    var resendIn by remember { mutableIntStateOf(0) }
+    LaunchedEffect(resendIn) {
+        if (resendIn > 0) {
+            kotlinx.coroutines.delay(1000)
+            resendIn--
+        }
+    }
 
     val emailOk = email.trim().matches(Regex("[^@\\s]+@[^@\\s]+\\.[^@\\s]+"))
     val canSubmit = !busy && emailOk && password.length >= (if (mode == 1) 8 else 1) && (mode == 0 || name.isNotBlank())
@@ -96,6 +114,25 @@ fun LoginScreen(onSignedIn: () -> Unit, onSkip: (() -> Unit)?) {
                 message = e.message
             } finally {
                 busy = false
+            }
+        }
+    }
+
+    fun sendCode(resend: Boolean) {
+        val activity = context.findActivity() ?: return
+        run {
+            val step = Auth.startPhoneSignIn(activity, "+91$phone", if (resend) resendToken else null)
+            when (step) {
+                is Auth.PhoneStep.CodeSent -> {
+                    verificationId = step.verificationId
+                    resendToken = step.resendToken
+                    resendIn = 30
+                    info = "We sent a 6-digit code to +91 $phone."
+                }
+                Auth.PhoneStep.SignedIn -> {
+                    haptics.confirm()
+                    onSignedIn()
+                }
             }
         }
     }
@@ -175,31 +212,46 @@ fun LoginScreen(onSignedIn: () -> Unit, onSkip: (() -> Unit)?) {
                 }
             }
 
-            SegmentedTabs(options = listOf("Sign in", "Create account"), selectedIndex = mode, onSelect = { mode = it; message = null })
+            SegmentedTabs(options = listOf("Email", "Phone"), selectedIndex = method, onSelect = { method = it; message = null; info = null })
             Spacer(Modifier.height(Space.l))
-            Column(verticalArrangement = Arrangement.spacedBy(Space.s)) {
-                if (mode == 1) {
-                    ChittiTextField(name, { name = it }, "Your name", leadingIcon = Icons.Rounded.Person, imeAction = ImeAction.Next)
-                }
-                ChittiTextField(
-                    email, { email = it.trim() }, "Email",
-                    leadingIcon = Icons.Rounded.Email,
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
-                )
-                ChittiTextField(
-                    password, { password = it }, if (mode == 1) "Password (8+ characters)" else "Password",
-                    leadingIcon = Icons.Rounded.Lock,
-                    keyboardType = KeyboardType.Password,
-                    visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailing = {
-                        BarIconButton(
-                            icon = if (showPassword) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
-                            contentDescription = if (showPassword) "Hide password" else "Show password",
-                            tint = colors.textMid,
-                            onClick = { showPassword = !showPassword }
-                        )
+
+            if (method == 0) {
+                Column(verticalArrangement = Arrangement.spacedBy(Space.s)) {
+                    if (mode == 1) {
+                        ChittiTextField(name, { name = it }, "Your name", leadingIcon = Icons.Rounded.Person, imeAction = ImeAction.Next)
                     }
+                    ChittiTextField(
+                        email, { email = it.trim() }, "Email",
+                        leadingIcon = Icons.Rounded.Email,
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    )
+                    ChittiTextField(
+                        password, { password = it }, if (mode == 1) "Password (8+ characters)" else "Password",
+                        leadingIcon = Icons.Rounded.Lock,
+                        keyboardType = KeyboardType.Password,
+                        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailing = {
+                            BarIconButton(
+                                icon = if (showPassword) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                                contentDescription = if (showPassword) "Hide password" else "Show password",
+                                tint = colors.textMid,
+                                onClick = { showPassword = !showPassword }
+                            )
+                        }
+                    )
+                }
+            } else {
+                PhoneForm(
+                    busy = busy,
+                    codeSent = verificationId != null,
+                    phone = phone,
+                    onPhoneChange = { phone = it.filter(Char::isDigit).take(10) },
+                    code = code,
+                    onCodeChange = { code = it.filter(Char::isDigit).take(6) },
+                    resendIn = resendIn,
+                    onChangeNumber = { verificationId = null; code = ""; message = null; info = null },
+                    onResend = { sendCode(resend = true) }
                 )
             }
 
@@ -214,31 +266,99 @@ fun LoginScreen(onSignedIn: () -> Unit, onSkip: (() -> Unit)?) {
             }
 
             Spacer(Modifier.height(Space.l))
-            PrimaryButton(
-                text = if (busy) "Please wait…" else if (mode == 0) "Sign in" else "Create account",
-                enabled = canSubmit,
-                onClick = {
-                    run {
-                        if (mode == 0) Auth.signInWithEmail(email, password) else Auth.createAccount(name, email, password)
-                        haptics.confirm()
-                        onSignedIn()
+            if (method == 0) {
+                PrimaryButton(
+                    text = if (busy) "Please wait…" else if (mode == 0) "Sign in" else "Create account",
+                    enabled = canSubmit,
+                    onClick = {
+                        run {
+                            if (mode == 0) Auth.signInWithEmail(email, password) else Auth.createAccount(name, email, password)
+                            haptics.confirm()
+                            onSignedIn()
+                        }
                     }
+                )
+                LinkButton(
+                    text = if (mode == 0) "New here? Create an account" else "Have an account? Sign in",
+                    enabled = !busy,
+                    onClick = { mode = 1 - mode; message = null }
+                )
+                if (mode == 0) {
+                    LinkButton(text = "Forgot password?", enabled = !busy, color = colors.textMid, onClick = {
+                        if (!emailOk) {
+                            message = "Type your email above first."
+                        } else run {
+                            Auth.sendPasswordReset(email)
+                            info = "We sent a reset link to $email."
+                        }
+                    })
                 }
-            )
-            if (mode == 0) {
-                LinkButton(text = "Forgot password?", enabled = !busy, onClick = {
-                    if (!emailOk) {
-                        message = "Type your email above first."
-                    } else run {
-                        Auth.sendPasswordReset(email)
-                        info = "We sent a reset link to $email."
+            } else {
+                val vid = verificationId
+                PrimaryButton(
+                    text = if (busy) "Please wait…" else if (vid == null) "Send code" else "Verify",
+                    enabled = !busy && (if (vid == null) phone.length == 10 else code.length == 6),
+                    onClick = {
+                        if (vid == null) sendCode(resend = false) else run {
+                            Auth.confirmPhoneCode(vid, code)
+                            haptics.confirm()
+                            onSignedIn()
+                        }
                     }
-                })
+                )
             }
             if (onSkip != null && BuildConfig.DEBUG) {
                 LinkButton(text = "Skip for now (debug)", color = colors.textMid, onClick = onSkip)
             }
             Spacer(Modifier.height(Space.xxl))
+        }
+    }
+}
+
+/** Phone number (India, +91) and then the SMS code. The code is often read automatically. */
+@Composable
+private fun PhoneForm(
+    busy: Boolean,
+    codeSent: Boolean,
+    phone: String,
+    onPhoneChange: (String) -> Unit,
+    code: String,
+    onCodeChange: (String) -> Unit,
+    resendIn: Int,
+    onChangeNumber: () -> Unit,
+    onResend: () -> Unit
+) {
+    val colors = Chitti.colors
+    Column(verticalArrangement = Arrangement.spacedBy(Space.s)) {
+        ChittiTextField(
+            phone, onPhoneChange, "10-digit mobile number",
+            leadingIcon = Icons.Rounded.Phone,
+            keyboardType = KeyboardType.Phone,
+            imeAction = ImeAction.Done,
+            trailing = { Text("+91", style = MaterialTheme.typography.bodyLarge, color = colors.textMid) }
+        )
+        if (codeSent) {
+            ChittiTextField(
+                code, onCodeChange, "6-digit code",
+                leadingIcon = Icons.Rounded.Sms,
+                keyboardType = KeyboardType.NumberPassword,
+                imeAction = ImeAction.Done
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LinkButton(text = "Change number", enabled = !busy, color = colors.textMid, onClick = onChangeNumber)
+                Spacer(Modifier.weight(1f))
+                LinkButton(
+                    text = if (resendIn > 0) "Resend in ${resendIn}s" else "Resend code",
+                    enabled = !busy && resendIn == 0,
+                    onClick = onResend
+                )
+            }
+        } else {
+            Text(
+                "We'll text you a code. Standard SMS rates may apply.",
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textMid
+            )
         }
     }
 }

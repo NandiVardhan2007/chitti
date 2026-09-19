@@ -105,7 +105,7 @@ upload rate limiting.
 |---|---|---|---|
 | `MONGODB_URI` | yes | - | Atlas `mongodb+srv://...` connection string |
 | `MONGODB_DB` | no | `chitti` | |
-| `FIREBASE_PROJECT_ID` | yes | - | `chitti-509103` |
+| `FIREBASE_PROJECT_ID` | yes | - | `chitti-bd8ce` |
 | `FIREBASE_SERVICE_ACCOUNT_BASE64` | in production | - | base64 of the service-account JSON |
 | `PORT` | no | `8080` | Render sets this |
 | `MAX_BACKUP_BYTES` | no | `52428800` (50 MB) | |
@@ -130,7 +130,7 @@ upload rate limiting.
 
 ### 2. Firebase service account
 
-1. Firebase console -> project **chitti-509103** -> gear icon -> **Project settings** -> **Service accounts**.
+1. Firebase console -> project **chitti-bd8ce** -> gear icon -> **Project settings** -> **Service accounts**.
 2. **Generate new private key** -> confirm. A JSON file downloads. **Never commit it** (`.gitignore` blocks
    `service-account*.json` and `backend/*.json.key`, but keep it outside the repo anyway).
 3. Base64-encode it on one line:
@@ -148,7 +148,7 @@ upload rate limiting.
    *(Or create it by hand: **New** -> **Web Service**, root directory `backend`, build `npm ci`, start `npm start`,
    instance type Free, health check path `/health`, and the env vars below.)*
 3. Render asks for the `sync: false` secrets: paste `MONGODB_URI` and `FIREBASE_SERVICE_ACCOUNT_BASE64`.
-   `NODE_ENV=production`, `FIREBASE_PROJECT_ID=chitti-509103`, `MONGODB_DB` and `MAX_BACKUP_BYTES` are already set
+   `NODE_ENV=production`, `FIREBASE_PROJECT_ID=chitti-bd8ce`, `MONGODB_DB` and `MAX_BACKUP_BYTES` are already set
    by the Blueprint.
 4. Deploy, then check `https://<service>.onrender.com/health` returns `{"ok":true}`. Put that base URL into the
    Android app's backend setting.

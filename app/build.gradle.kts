@@ -38,7 +38,7 @@ android {
             "\"${localProperties.getProperty(key, default)}\""
         buildConfigField("String", "FIREBASE_API_KEY", local("FIREBASE_API_KEY"))
         buildConfigField("String", "FIREBASE_APP_ID", local("FIREBASE_APP_ID"))
-        buildConfigField("String", "FIREBASE_PROJECT_ID", local("FIREBASE_PROJECT_ID", "chitti-509103"))
+        buildConfigField("String", "FIREBASE_PROJECT_ID", local("FIREBASE_PROJECT_ID", "chitti-bd8ce"))
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", local("GOOGLE_WEB_CLIENT_ID"))
         buildConfigField("String", "BACKEND_URL", local("BACKEND_URL"))
     }
