@@ -218,7 +218,7 @@ fun ChatBotScreen(
             // The list only ever appends, so the index is a stable key; animateItemPlacement keeps
             // existing bubbles gliding up when the thinking row appears/disappears.
             itemsIndexed(messages, key = { index, _ -> index }) { index, msg ->
-                Box(modifier = Modifier.animateItemPlacement(ChittiMotion.settle())) {
+                Box(modifier = Modifier.animateItem(placementSpec = ChittiMotion.settle())) {
                     GeminiChatBubble(
                         msg = msg,
                         reveal = index == freshIndex,

@@ -160,7 +160,7 @@ fun TodayScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .staggeredEntrance(index)
-                            .animateItemPlacement(ChittiMotion.settle())
+                            .animateItem(placementSpec = ChittiMotion.settle())
                     ) {
                         ChittiCard(
                             event = event,

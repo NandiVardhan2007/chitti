@@ -176,7 +176,7 @@ fun MemoryScreen(
                             onCommit = { onDeleteMemory(memory) }
                         ),
                         modifier = Modifier
-                            .animateItemPlacement(ChittiMotion.settle())
+                            .animateItem(placementSpec = ChittiMotion.settle())
                             .staggeredEntrance(index)
                     ) {
                         MemoryCard(

@@ -156,7 +156,7 @@ fun InboxScreen(
                             onCommit = { onDelete(notification) }
                         ),
                         modifier = Modifier
-                            .animateItemPlacement(ChittiMotion.settle())
+                            .animateItem(placementSpec = ChittiMotion.settle())
                             .staggeredEntrance(index)
                     ) {
                         NotificationCard(
