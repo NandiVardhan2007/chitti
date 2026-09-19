@@ -121,9 +121,7 @@ class AssistantIntentDispatcher(
         }
 
         // 5. Current Time & Date
-        if (lower.contains("what time") || lower.contains("current time") || lower.contains("what is the time") ||
-            lower.contains("today's date") || lower.contains("what day is it") || lower.contains("what date is it")
-        ) {
+        if (asksForTimeOrDate(lower)) {
             val now = Date()
             val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
             val dateFormat = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
@@ -424,3 +422,12 @@ internal fun describeSavedFact(fact: Memory): String {
     val value = fact.value.trim().trimEnd('.')
     return if (key.startsWith("my ", ignoreCase = true)) "Your ${key.drop(3)} is $value." else "$key: $value."
 }
+
+/**
+ * A question about the time or date. Speech recognition often drops the first word, so the
+ * fragments it leaves ("time it is", "time now") count as well as the full questions.
+ */
+internal fun asksForTimeOrDate(lower: String): Boolean =
+    Regex("\\b(what('?s| is)? the time|what time|current time|time (is it|it is|now|please)|tell me the time|" +
+        "today'?s date|what day is it|what date is it|what'?s the date)\\b").containsMatchIn(lower) ||
+        lower.trim() == "time"
