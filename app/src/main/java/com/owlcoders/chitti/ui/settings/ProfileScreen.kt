@@ -95,6 +95,7 @@ import com.owlcoders.chitti.ui.components.LinkButton
 import com.owlcoders.chitti.ui.components.PrimaryButton
 import com.owlcoders.chitti.ui.components.Space
 import com.owlcoders.chitti.ui.components.insetSection
+import com.owlcoders.chitti.ui.components.skeletonSection
 import com.owlcoders.chitti.ui.components.rememberHaptics
 import com.owlcoders.chitti.ui.screens.ChoiceCapsule
 import com.owlcoders.chitti.ui.theme.Chitti
@@ -202,7 +203,8 @@ private fun PersonalDetailsContent(noScreenLock: Boolean, onOpenDocument: (Long)
 
     // ---- identity + documents
     val identity by IdentityStore.identity.collectAsState()
-    val documents by db.personalDocumentDao().observeAll().collectAsState(initial = emptyList())
+    val documentsOrNull by db.personalDocumentDao().observeAll().collectAsState(initial = null)
+    val documents = documentsOrNull.orEmpty()
     var revealAadhaar by remember { mutableStateOf(false) }
     var revealPan by remember { mutableStateOf(false) }
     var editingIdentity by remember { mutableStateOf(false) }
@@ -340,7 +342,8 @@ private fun PersonalDetailsContent(noScreenLock: Boolean, onOpenDocument: (Long)
             }
         }
 
-        insetSection(key = "docs", header = "Documents", footer = "Stored encrypted. Only viewable after unlocking.") {
+        if (documentsOrNull == null) skeletonSection("docs-loading", rows = 2)
+        else insetSection(key = "docs", header = "Documents", footer = "Stored encrypted. Only viewable after unlocking.") {
             if (documents.isEmpty()) {
                 row("none") {
                     InsetRow(

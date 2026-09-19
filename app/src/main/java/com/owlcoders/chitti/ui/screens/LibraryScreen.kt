@@ -31,6 +31,7 @@ import com.owlcoders.chitti.ui.components.SearchField
 import com.owlcoders.chitti.ui.components.SegmentedTabs
 import com.owlcoders.chitti.ui.components.Space
 import com.owlcoders.chitti.ui.components.insetSection
+import com.owlcoders.chitti.ui.components.skeletonSection
 
 private const val PreviewCount = 4
 
@@ -52,7 +53,8 @@ fun LibraryScreen(
     categories: List<String>,
     actions: LibraryActions,
     onOpenFound: () -> Unit,
-    onOpenKnows: () -> Unit
+    onOpenKnows: () -> Unit,
+    loading: Boolean = false
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var editing by remember { mutableStateOf<Memory?>(null) }
@@ -83,6 +85,11 @@ fun LibraryScreen(
             )
         }
 
+        if (loading) {
+            skeletonSection("found-loading", rows = 3)
+            skeletonSection("knows-loading", rows = 2, withIcon = false)
+            return@LargeTitleScaffold
+        }
         if (q.isNotEmpty() && found.isEmpty() && known.isEmpty()) {
             item(key = "no-results") {
                 EmptyState(icon = Icons.Rounded.Search, title = "No results", message = "Nothing Chitti found or knows matches \"$q\".")
@@ -154,7 +161,7 @@ private val FoundFilters = listOf("All", "New", "Handled")
 
 /** Every notification Chitti found, grouped by day, filterable by whether you've dealt with it. */
 @Composable
-fun FoundScreen(notifications: List<NotificationEntity>, actions: LibraryActions) {
+fun FoundScreen(notifications: List<NotificationEntity>, actions: LibraryActions, loading: Boolean = false) {
     var filter by rememberSaveable { mutableIntStateOf(0) }
     val shown = when (filter) {
         1 -> notifications.filter { !it.processed }
@@ -175,6 +182,10 @@ fun FoundScreen(notifications: List<NotificationEntity>, actions: LibraryActions
                 onSelect = { filter = it },
                 modifier = Modifier.padding(horizontal = Space.gutter).padding(top = Space.m)
             )
+        }
+        if (loading) {
+            skeletonSection("found-all-loading", rows = 5)
+            return@LargeTitleScaffold
         }
         if (shown.isEmpty()) {
             item(key = "empty") {
@@ -199,7 +210,7 @@ fun FoundScreen(notifications: List<NotificationEntity>, actions: LibraryActions
 
 /** Everything Chitti knows, grouped by kind. */
 @Composable
-fun KnowsScreen(memories: List<Memory>, categories: List<String>, actions: LibraryActions) {
+fun KnowsScreen(memories: List<Memory>, categories: List<String>, actions: LibraryActions, loading: Boolean = false) {
     var kind by rememberSaveable { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<Memory?>(null) }
     var adding by remember { mutableStateOf(false) }
@@ -225,6 +236,10 @@ fun KnowsScreen(memories: List<Memory>, categories: List<String>, actions: Libra
                     categories.forEach { c -> ChoiceCapsule(c.titleCase(), selected = kind == c) { kind = c } }
                 }
             }
+        }
+        if (loading) {
+            skeletonSection("knows-all-loading", rows = 4, withIcon = false)
+            return@LargeTitleScaffold
         }
         if (shown.isEmpty()) {
             item(key = "empty") {

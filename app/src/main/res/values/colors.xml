@@ -2,4 +2,6 @@
 <resources>
     <!-- Window background before Compose draws: the grouped background (see ChittiColors). -->
     <color name="chitti_background">#F2F2EC</color>
+    <!-- Splash: always the dark brand tile, in both appearances. -->
+    <color name="chitti_splash">#050508</color>
 </resources>

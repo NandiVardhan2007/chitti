@@ -53,7 +53,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -258,6 +257,7 @@ fun VoiceOverlay(
             VoiceForm(
                 state = state,
                 level = rmsLevel,
+                succeeded = assistantResponse?.actionSuccess == true,
                 onClick = onMicClick,
                 modifier = Modifier.size(168.dp)
             )
@@ -322,6 +322,7 @@ private fun Transcript(text: String, final: Boolean) {
 private fun VoiceForm(
     state: VoiceAssistantState,
     level: Float,
+    succeeded: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -341,6 +342,12 @@ private fun VoiceForm(
         },
         animationSpec = Motion.gentle(),
         label = "formScale"
+    )
+
+    val happy by animateFloatAsState(
+        targetValue = if (succeeded && (state == VoiceAssistantState.RESULT || state == VoiceAssistantState.SPEAKING)) 1f else 0f,
+        animationSpec = Motion.standard(),
+        label = "happy"
     )
 
     // A clock for the waves, read only inside draw so it costs a redraw, not a recomposition.
@@ -380,63 +387,21 @@ private fun VoiceForm(
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
-        // The logo's shading: a lighter top-left, brand yellow, a deeper lower edge.
-        drawPath(
-            path = path,
-            brush = Brush.radialGradient(
-                0f to lerp(colors.accentFill, colors.specular, 0.35f),
-                0.55f to colors.accentFill,
-                1f to colors.accentDeep,
-                center = Offset(c.x - base * 0.28f, c.y - base * 0.4f),
-                radius = base * 1.64f
-            )
-        )
-        // The light catching its top-left, as in the logo.
-        drawArc(
-            color = colors.specular.copy(alpha = 0.4f),
-            startAngle = 190f,
-            sweepAngle = 70f,
-            useCenter = false,
-            topLeft = Offset(c.x - base * 0.77f, c.y - base * 0.77f),
-            size = androidx.compose.ui.geometry.Size(base * 1.54f, base * 1.54f),
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = base * 0.065f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-        )
+        drawChittiBody(c, base, colors, outline = path)
 
-        // The eyes. Proportions and the -8 degree slant come from the logo (face r=31, eyes 7.5 x 17
-        // at +/-7.75 from centre, 3.5 above it). They blink every few seconds, glance side to
-        // side while Chitti thinks, and widen a little with the voice.
+        // Expression, from the eyes alone: a blink every few seconds, a glance from side to side
+        // while thinking, eyes a little wider as the voice gets louder, a happy squint when an
+        // action went through.
         val blinkPhase = t % 4.2f
         val blink = if (reduce || blinkPhase > 0.18f) 1f else 1f - 0.9f * sin(blinkPhase / 0.18f * PI.toFloat())
-        val glance = if (!reduce && state == VoiceAssistantState.THINKING) 0.09f * sin(t * 2.4f) else 0f
-        val eyeW = base * 0.242f
-        val eyeH = base * 0.548f * blink * (1f + 0.12f * voice)
-        val eyeY = c.y - base * 0.113f
-        for (side in listOf(-1f, 1f)) {
-            drawPath(eyePath(c.x + side * base * 0.25f + glance * base, eyeY, eyeW, eyeH, c.y), colors.onAccent)
-        }
+        drawChittiEyes(
+            c, base,
+            FaceExpression(
+                eyeOpen = blink * (1f + 0.12f * voice),
+                lookX = if (!reduce && state == VoiceAssistantState.THINKING) 0.7f * sin(t * 2.4f) else 0f,
+                squint = happy
+            ),
+            colors.onAccent
+        )
     }
-}
-
-/** A capsule of [w] x [h] centred at ([cx], [cy]), slanted like the logo's eyes (skewX -8 degrees about [pivotY]). */
-private fun eyePath(cx: Float, cy: Float, w: Float, h: Float, pivotY: Float): Path {
-    val skew = kotlin.math.tan(Math.toRadians(-8.0)).toFloat()
-    val r = w / 2f
-    val top = cy - h / 2f + r
-    val bottom = cy + h / 2f - r
-    val p = Path()
-    val steps = 10
-    fun add(x: Float, y: Float, first: Boolean) {
-        val sx = x + skew * (y - pivotY)
-        if (first) p.moveTo(sx, y) else p.lineTo(sx, y)
-    }
-    for (i in 0..steps) {
-        val a = PI.toFloat() + PI.toFloat() * i / steps
-        add(cx + r * cos(a), minOf(top, cy) + r * sin(a), i == 0)
-    }
-    for (i in 0..steps) {
-        val a = PI.toFloat() * i / steps
-        add(cx + r * cos(a), maxOf(bottom, cy) + r * sin(a), false)
-    }
-    p.close()
-    return p
 }

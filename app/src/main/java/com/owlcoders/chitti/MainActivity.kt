@@ -79,6 +79,10 @@ import com.owlcoders.chitti.security.AppLock
 import com.owlcoders.chitti.ui.components.AppMenuActions
 import com.owlcoders.chitti.ui.components.LocalAppMenu
 import com.owlcoders.chitti.ui.screens.AiLabScreen
+import com.owlcoders.chitti.ui.screens.ChittiSplash
+import androidx.activity.SystemBarStyle
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.owlcoders.chitti.ui.screens.BackupScreen
 import com.owlcoders.chitti.ui.screens.LockScreen
 import com.owlcoders.chitti.ui.screens.LoginScreen
@@ -136,6 +140,8 @@ class MainActivity : FragmentActivity() {
     private var sttManager: SpeechToTextManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The system starting window (brand-dark, no icon) hands over to ChittiSplash.
+        installSplashScreen()
         // Content draws behind the status and navigation bars; the glass bars sit over it.
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -267,14 +273,18 @@ class MainActivity : FragmentActivity() {
 
                 // ----- Data from Room
                 val db = app.database
-                val events by db.eventDao().getAllEvents().collectAsState(initial = emptyList())
+                val eventsOrNull by db.eventDao().getAllEvents().collectAsState(initial = null as List<com.owlcoders.chitti.db.CapturedEvent>?)
+                val events = eventsOrNull.orEmpty()
                 SideEffect { latestEvents.value = events }
                 val tasks by db.taskDao().getAllTasks().collectAsState(initial = emptyList())
-                val notifications by db.notificationDao().getAllNotifications().collectAsState(initial = emptyList())
-                val memories by db.memoryDao().getAllMemories().collectAsState(initial = emptyList())
+                val notificationsOrNull by db.notificationDao().getAllNotifications().collectAsState(initial = null as List<com.owlcoders.chitti.db.entities.NotificationEntity>?)
+                val notifications = notificationsOrNull.orEmpty()
+                val memoriesOrNull by db.memoryDao().getAllMemories().collectAsState(initial = null as List<Memory>?)
+                val memories = memoriesOrNull.orEmpty()
                 SideEffect { latestMemories.value = memories }
                 val memoryCategories by db.memoryDao().getCategories().collectAsState(initial = emptyList())
-                val history by db.automationHistoryDao().getRecentHistory(100).collectAsState(initial = emptyList())
+                val historyOrNull by db.automationHistoryDao().getRecentHistory(100).collectAsState(initial = null as List<com.owlcoders.chitti.db.entities.AutomationHistory>?)
+                val history = historyOrNull.orEmpty()
                 val chatHistory by db.chatHistoryDao().getAllMessages().collectAsState(initial = emptyList())
                 val profile by db.userProfileDao().getUserProfile().collectAsState(initial = null)
                 val profileName = profile?.let { listOf(it.firstName, it.lastName).filter(String::isNotBlank).joinToString(" ") }?.takeIf { it.isNotBlank() }
@@ -303,6 +313,25 @@ class MainActivity : FragmentActivity() {
 
                 // ----- App lock
                 var locked by remember { mutableStateOf(AppLock.appNeedsUnlock(context)) }
+
+                // ----- Splash: once per launch. The full wake-up plays on the first launch after
+                // install, a short one after that.
+                var showSplash by rememberSaveable { mutableStateOf(true) }
+                val fullSplash = remember { !prefs.getBoolean("splash_full_seen", false) }
+                // The app is composed only once the splash says so (see ChittiSplash).
+                var contentReady by rememberSaveable { mutableStateOf(!showSplash) }
+                // Light status-bar icons over the dark splash, then back to following the theme.
+                val darkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+                LaunchedEffect(showSplash, darkTheme) {
+                    if (showSplash) {
+                        enableEdgeToEdge(
+                            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+                            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                        )
+                    } else {
+                        enableEdgeToEdge()
+                    }
+                }
 
                 val menuActions = AppMenuActions(
                     accountLabel = user?.email,
@@ -367,7 +396,9 @@ class MainActivity : FragmentActivity() {
                 CompositionLocalProvider(LocalGlass provides glass, LocalBottomChrome provides bottomChrome, LocalAppMenu provides menuActions) {
                     Box(modifier = Modifier.fillMaxSize().background(Chitti.colors.background)) {
                         val offer = restoreOffer
-                        if (!signedIn) {
+                        if (!contentReady) {
+                            // Nothing yet: the splash covers the screen.
+                        } else if (!signedIn) {
                             LoginScreen(
                                 onSignedIn = {},
                                 onSkip = if (BuildConfig.DEBUG && !Auth.isConfigured) ({
@@ -383,11 +414,12 @@ class MainActivity : FragmentActivity() {
                                     TodayScreen(
                                         events = events,
                                         history = history,
+                                        loading = eventsOrNull == null,
                                         onDone = { e -> scope.launch { db.eventDao().deleteEvent(e) } },
                                         onOpenHistory = { navController.navigate(Routes.HISTORY) { launchSingleTop = true } }
                                     )
                                 }
-                                composable(Routes.HISTORY) { HistoryScreen(history = history) }
+                                composable(Routes.HISTORY) { HistoryScreen(history = history, loading = historyOrNull == null) }
                                 composable(Routes.ASK) {
                                     AskScreen(
                                         events = events,
@@ -407,11 +439,12 @@ class MainActivity : FragmentActivity() {
                                         categories = memoryCategories,
                                         actions = libraryActions,
                                         onOpenFound = { navController.navigate(Routes.FOUND) { launchSingleTop = true } },
-                                        onOpenKnows = { navController.navigate(Routes.KNOWS) { launchSingleTop = true } }
+                                        onOpenKnows = { navController.navigate(Routes.KNOWS) { launchSingleTop = true } },
+                                        loading = notificationsOrNull == null || memoriesOrNull == null
                                     )
                                 }
-                                composable(Routes.FOUND) { FoundScreen(notifications = notifications, actions = libraryActions) }
-                                composable(Routes.KNOWS) { KnowsScreen(memories = memories, categories = memoryCategories, actions = libraryActions) }
+                                composable(Routes.FOUND) { FoundScreen(notifications = notifications, actions = libraryActions, loading = notificationsOrNull == null) }
+                                composable(Routes.KNOWS) { KnowsScreen(memories = memories, categories = memoryCategories, actions = libraryActions, loading = memoriesOrNull == null) }
                                 composable(Routes.SETTINGS) {
                                     SettingsScreen(
                                         profileName = profileName ?: user?.displayName,
@@ -485,8 +518,14 @@ class MainActivity : FragmentActivity() {
                             }
                         )
 
-                        if (locked && signedIn) {
+                        if (locked && signedIn && !showSplash) {
                             LockScreen(onUnlocked = { locked = false })
+                        }
+                        if (showSplash) {
+                            ChittiSplash(full = fullSplash, onReadyForContent = { contentReady = true }, onFinished = {
+                                prefs.edit().putBoolean("splash_full_seen", true).apply()
+                                showSplash = false
+                            })
                         }
                     }
                 }

@@ -10,6 +10,7 @@ import com.owlcoders.chitti.ui.components.Inset
 import com.owlcoders.chitti.ui.components.LargeTitleScaffold
 import com.owlcoders.chitti.ui.components.LargeTitleSubtitle
 import com.owlcoders.chitti.ui.components.insetSection
+import com.owlcoders.chitti.ui.components.skeletonSection
 import com.owlcoders.chitti.ui.theme.Chitti
 
 /**
@@ -17,7 +18,7 @@ import com.owlcoders.chitti.ui.theme.Chitti
  * "See all" on Today.
  */
 @Composable
-fun HistoryScreen(history: List<AutomationHistory>) {
+fun HistoryScreen(history: List<AutomationHistory>, loading: Boolean = false) {
     val colors = Chitti.colors
     val failed = history.count { outcomeOf(it.result) == Outcome.Failed }
     val byDay = remember(history) { history.groupBy { dayBucket(it.executedAt) } }
@@ -34,6 +35,10 @@ fun HistoryScreen(history: List<AutomationHistory>) {
             )
         }
     ) {
+        if (loading) {
+            skeletonSection("history-loading", rows = 4)
+            return@LargeTitleScaffold
+        }
         if (history.isEmpty()) {
             item(key = "empty") {
                 EmptyState(

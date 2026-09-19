@@ -6,4 +6,12 @@
     <style name="Theme.Chitti" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/chitti_background</item>
     </style>
+
+    <!-- Starting window: the brand-dark tile with no icon. The animated splash (ChittiSplash)
+         draws the face on the same background, so the hand-off has no seam. -->
+    <style name="Theme.Chitti.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/chitti_splash</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_blank</item>
+        <item name="postSplashScreenTheme">@style/Theme.Chitti</item>
+    </style>
 </resources>

@@ -34,6 +34,7 @@ import com.owlcoders.chitti.ui.components.RollingNumber
 import com.owlcoders.chitti.ui.components.SwipeAction
 import com.owlcoders.chitti.ui.components.SwipeActionBox
 import com.owlcoders.chitti.ui.components.insetSection
+import com.owlcoders.chitti.ui.components.skeletonSection
 import com.owlcoders.chitti.ui.theme.Chitti
 import com.owlcoders.chitti.ui.theme.ChittiColors
 import java.text.SimpleDateFormat
@@ -52,7 +53,8 @@ fun TodayScreen(
     events: List<CapturedEvent>,
     history: List<AutomationHistory>,
     onDone: (CapturedEvent) -> Unit,
-    onOpenHistory: () -> Unit
+    onOpenHistory: () -> Unit,
+    loading: Boolean = false
 ) {
     val colors = Chitti.colors
     val context = LocalContext.current
@@ -64,9 +66,13 @@ fun TodayScreen(
     LargeTitleScaffold(
         title = "Today",
         eyebrow = today,
-        subtitle = { TodayCounts(total = events.size, urgent = urgent.size) },
+        subtitle = { if (!loading) TodayCounts(total = events.size, urgent = urgent.size) },
         actions = { AppMenuButton() }
     ) {
+        if (loading) {
+            skeletonSection("today-loading", rows = 3)
+            return@LargeTitleScaffold
+        }
         if (events.isEmpty()) {
             item(key = "empty") {
                 EmptyState(
