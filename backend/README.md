@@ -19,6 +19,7 @@ another user's data. Errors are JSON: `{"error":"<code>","message":"..."}`.
 | Method & path | Auth | Request | Success | Errors |
 |---|---|---|---|---|
 | `GET /health` | no | - | `200 {"ok":true}` | - |
+| `GET /ping` | no | - | `200 pong` (plain text, `no-store`, not logged); for an uptime monitor | - |
 | `POST /v1/me` | yes | optional JSON `{"displayName": string<=100}` | `200` user | `400 bad_request`, `413 too_large` (JSON over 10 kB) |
 | `GET /v1/me` | yes | - | `200 {...user, "backup": meta \| null}` | `404 not_found` (call `POST /v1/me` first) |
 | `DELETE /v1/me` | yes | - | `204`; deletes the user record **and** the backup | - |
@@ -154,7 +155,8 @@ upload rate limiting.
    Android app's backend setting.
 
 Free-tier notes: the instance sleeps after about 15 minutes idle and takes 30 to 60 seconds to wake. The app calls
-`GET /health` first to wake it. RAM is 512 MB, which is why uploads are streamed. Render sends `SIGTERM` on
+`GET /health` first to wake it. To keep it awake instead, point an uptime monitor (e.g. UptimeRobot) at
+`GET /ping` every 5 to 10 minutes. RAM is 512 MB, which is why uploads are streamed. Render sends `SIGTERM` on
 redeploy; the server stops accepting connections, lets in-flight requests finish (up to 25 s) and closes MongoDB.
 
 ## Layout

@@ -26,7 +26,7 @@ export function createApp({ db, verifyToken, logger, maxBackupBytes = 52428800, 
         res.setHeader('X-Request-Id', id);
         return id;
       },
-      autoLogging: { ignore: (req) => req.url === '/health' },
+      autoLogging: { ignore: (req) => req.url === '/health' || req.url === '/ping' },
       // Log only what we need: never headers (Authorization), bodies or backup bytes.
       serializers: {
         req: (req) => ({ id: req.id, method: req.method, url: req.url }),
@@ -36,6 +36,8 @@ export function createApp({ db, verifyToken, logger, maxBackupBytes = 52428800, 
   );
 
   app.get('/health', (req, res) => res.json({ ok: true }));
+  // For an uptime monitor that keeps the free instance awake: no database work, never cached, not logged.
+  app.get('/ping', (req, res) => res.set('Cache-Control', 'no-store').type('text/plain').send('pong'));
 
   const limiter = (windowMs, limit, key) =>
     rateLimit({

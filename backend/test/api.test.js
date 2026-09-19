@@ -79,6 +79,14 @@ describe('health', () => {
     expect(res.headers['x-powered-by']).toBeUndefined();
     expect(res.headers['x-request-id']).toBeTruthy();
   });
+
+  it('GET and HEAD /ping are public and never cached', async () => {
+    const res = await request(app).get('/ping');
+    expect(res.status).toBe(200);
+    expect(res.text).toBe('pong');
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect((await request(app).head('/ping')).status).toBe(200);
+  });
 });
 
 describe('auth', () => {
