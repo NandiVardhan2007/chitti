@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.owlcoders.chitti.db.CapturedEvent
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -34,24 +35,61 @@ class ExtractionEngine(private val context: Context, modelPath: String = "/data/
         private set
 
     init {
-        try {
+        llmInference = loadModel(modelPath)
+        lastInferenceMode = if (llmInference != null) "Gemma 2B (On-Device)" else "Rule-based Regex"
+    }
+
+    /**
+     * Loads the model, surviving a bad weights cache.
+     *
+     * MediaPipe writes a weights cache to `cacheDir/<model>.cache` on first load. If the process
+     * dies while writing it (killed, updated, phone unplugged), the half-written file makes every
+     * later load segfault in native code, where nothing can catch it: the app would crash on every
+     * start. So a marker is written before the load and removed after it. Finding it at start means
+     * the last load never finished: the caches are deleted and rebuilt. If loading still crashes
+     * after that, the model is skipped (rule-based mode) until the app is updated.
+     */
+    private fun loadModel(modelPath: String): LlmInference? {
+        val marker = File(context.noBackupFilesDir, LOAD_MARKER)
+        val version = appVersionCode()
+        val (failedLoads, markerVersion) = marker.takeIf { it.exists() }
+            ?.readText()?.split(':')?.let { (it.getOrNull(0)?.toIntOrNull() ?: 0) to it.getOrNull(1)?.toLongOrNull() }
+            ?: (0 to null)
+        val failures = if (markerVersion == version) failedLoads else 0
+        if (failures >= MAX_FAILED_LOADS) {
+            Log.w(TAG, "Model loading crashed $failures times; staying in rule-based mode until the next update")
+            return null
+        }
+        if (failures > 0) {
+            val dropped = context.cacheDir.listFiles { f -> f.isFile && f.name.endsWith(".cache") }.orEmpty()
+            dropped.forEach { it.delete() }
+            Log.w(TAG, "The last model load never finished; dropped ${dropped.size} cache file(s) so they are rebuilt")
+        }
+        runCatching { marker.writeText("${failures + 1}:$version") }
+
+        return try {
             val options = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelPath)
                 .setMaxTokens(MAX_TOKENS)
                 .build()
-
-            llmInference = LlmInference.createFromOptions(context, options)
-            lastInferenceMode = "Gemma 2B (On-Device)"
-            Log.d(TAG, "LLM Initialized successfully from $modelPath")
+            LlmInference.createFromOptions(context, options).also {
+                Log.d(TAG, "LLM Initialized successfully from $modelPath")
+            }
         } catch (t: Throwable) {
             // Throwable, not Exception: a missing native library (UnsatisfiedLinkError) or an
             // OutOfMemoryError while mapping the 1.3 GB model must degrade to regex mode
             // instead of killing the process from the warm-up coroutine.
             Log.i(TAG, "LLM unavailable, operating in rule-based mode: ${t.javaClass.simpleName}: ${t.message}")
-            llmInference = null
-            lastInferenceMode = "Rule-based Regex"
+            null
+        } finally {
+            // Reached only if the process survived the load, crash or not.
+            marker.delete()
         }
     }
+
+    private fun appVersionCode(): Long = runCatching {
+        context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
+    }.getOrDefault(0L)
 
     fun isLlmLoaded(): Boolean = llmInference != null
 
@@ -329,6 +367,10 @@ class ExtractionEngine(private val context: Context, modelPath: String = "/data/
 
     companion object {
         private const val TAG = "ChittiExtraction"
+
+        /** Written before a model load and removed after it; see [loadModel]. */
+        private const val LOAD_MARKER = "llm-load-in-progress"
+        private const val MAX_FAILED_LOADS = 2
 
         /** Shared input + output token budget passed to MediaPipe. */
         private const val MAX_TOKENS = 1024
