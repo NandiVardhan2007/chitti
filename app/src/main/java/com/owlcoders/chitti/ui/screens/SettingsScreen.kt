@@ -42,6 +42,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
@@ -329,8 +331,16 @@ fun SettingsScreen(
         insetSection(key = "about", header = "About") {
             row("version") {
                 InsetRow(
-                    title = "Version",
-                    value = "1.0",
+                    title = "Chitti",
+                    subtitle = "By Owl Coders",
+                    leading = {
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(com.owlcoders.chitti.R.drawable.chitti_logo),
+                            contentDescription = null,
+                            modifier = Modifier.size(44.dp)
+                        )
+                    },
+                    value = "Version 1.0",
                     onClick = {
                         if (developer) return@InsetRow
                         versionTaps++

@@ -62,7 +62,8 @@ class ReminderReceiver : BroadcastReceiver() {
         notificationManager.createNotificationChannel(channel)
 
         val notification = NotificationCompat.Builder(context, "chitti_reminders")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(com.owlcoders.chitti.R.drawable.ic_stat_chitti)
+            .setColor(0xFFF0B31C.toInt())
             .setContentTitle("Chitti Reminder")
             .setContentText(title)
             .setStyle(NotificationCompat.BigTextStyle().bigText(title))

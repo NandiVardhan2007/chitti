@@ -118,7 +118,14 @@ Title size ~72–96 pt, pill text ~20–24 pt, card body ~18–20 pt, small labe
 
 > Spelling: the team is **OWL CODERS**. Never write "Owl Coaders" or "Owlcoders".
 
-### 3.5 App screenshots
+### 3.5 Logo
+The official logo set is in `branding/chitti-logo/` (a yellow face with two slanted eyes on a dark tile, in the same palette as the deck).
+- **Title slide and closing slide:** `svg/chitti-icon-primary.svg` (or `png/chitti-icon-primary/chitti-icon-primary-512.png`), about 160-200 px tall.
+- **On a yellow card or pill:** `svg/chitti-icon-inverse.svg` (yellow tile, black face).
+- **Small corner mark on content slides (optional):** `png/chitti-icon-primary/chitti-icon-primary-96.png`, top-right, 48 px.
+- Don't recolour, stretch or add effects to the logo.
+
+### 3.6 App screenshots
 Place phone screenshots inside a simple **black phone frame with rounded corners**, with no brand device mock-ups. The app itself uses a clean Apple-style look (black or white backgrounds, a blue accent, large titles), so it will contrast with the yellow deck; don't recolour screenshots. Where a screenshot isn't supplied, draw a **placeholder box** labelled with the screenshot name from §5.
 
 ---
@@ -129,6 +136,7 @@ Place phone screenshots inside a simple **black phone frame with rounded corners
 **Layout:** a huge title on the left, a yellow team card on the right, and the hexagonal tag under the title.
 
 - Event label: `IQOO HACKATHON 2026 · HYDERABAD CITY BATTLE`
+- Logo: `chitti-icon-primary.svg`, above or beside the title
 - Title: **CHITTI**
 - Subtitle (Chakra Petch): **NEVER MISS A DEADLINE BURIED IN YOUR GROUP CHATS**
 - Hex tag: `BY OWL CODERS`

@@ -116,16 +116,13 @@ fun LoginScreen(onSignedIn: () -> Unit, onSkip: (() -> Unit)?) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(Space.xxxl * 2))
-            Box(
-                modifier = Modifier.size(84.dp).clip(CircleShape).background(colors.accentFill),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(R.drawable.ic_chitti_foreground),
-                    contentDescription = null,
-                    modifier = Modifier.size(84.dp)
-                )
-            }
+            // The app icon itself, so the first screen introduces the face people will see on
+            // their home screen.
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.chitti_logo),
+                contentDescription = "Chitti",
+                modifier = Modifier.size(96.dp)
+            )
             Spacer(Modifier.height(Space.l))
             Text("Welcome to Chitti", style = MaterialTheme.typography.displayLarge, color = colors.textHigh, textAlign = TextAlign.Center)
             Spacer(Modifier.height(Space.xs))

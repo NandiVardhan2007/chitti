@@ -59,7 +59,8 @@ object LinkGuardNotifier {
 
         val topReason = verdict.reasons.firstOrNull() ?: "Suspicious link detected"
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setSmallIcon(com.owlcoders.chitti.R.drawable.ic_stat_chitti)
+            .setColor(0xFFF0B31C.toInt())
             .setContentTitle("Unsafe link in your messages")
             .setContentText(topReason)
             .setStyle(

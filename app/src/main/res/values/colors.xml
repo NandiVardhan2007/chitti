@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Launcher icon background: the product accent. -->
-    <color name="ic_launcher_background">#F0B31C</color>
     <!-- Window background before Compose draws: the grouped background (see ChittiColors). -->
     <color name="chitti_background">#F2F2EC</color>
 </resources>
