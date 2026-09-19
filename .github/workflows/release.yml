@@ -1,0 +1,124 @@
+# Publishes a signed APK as a GitHub Release when a version tag is pushed.
+#
+#   1. Bump chitti.versionName in gradle.properties (e.g. 1.0.0 -> 1.1.0) and commit it on main.
+#   2. git tag v1.1.0 && git push origin v1.1.0
+#
+# The tag must match chitti.versionName and point at a commit on main, or nothing is published.
+#
+# Repository secrets used:
+#   RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD
+#   FIREBASE_API_KEY, FIREBASE_APP_ID, SAFE_BROWSING_API_KEY, BACKEND_URL
+#   GOOGLE_WEB_CLIENT_ID (optional: Google sign-in is hidden in the app while it's empty)
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  # The release certificate. A build signed with anything else is refused: an APK signed with a
+  # different key can't update installed copies and fails the Firebase and Safe Browsing checks.
+  EXPECTED_CERT_SHA256: 73fdd527748841fd6c58c999670e8785d6c4d85f73a6cd79d464bd7ab865367d
+
+jobs:
+  release:
+    name: Build and publish APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag against the version and main
+        id: version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(grep -E '^chitti.versionName=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match chitti.versionName=$version in gradle.properties"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME points at a commit that is not on main"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Write signing key and app config
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          SAFE_BROWSING_API_KEY: ${{ secrets.SAFE_BROWSING_API_KEY }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          for name in RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD \
+                      FIREBASE_API_KEY FIREBASE_APP_ID SAFE_BROWSING_API_KEY BACKEND_URL; do
+            if [ -z "${!name}" ]; then echo "::error::Repository secret $name is not set"; exit 1; fi
+          done
+          keystore="$RUNNER_TEMP/chitti-release.jks"
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          {
+            echo "sdk.dir=$ANDROID_HOME"
+            echo "RELEASE_STORE_FILE=$keystore"
+            echo "RELEASE_STORE_PASSWORD=$RELEASE_STORE_PASSWORD"
+            echo "RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS"
+            echo "RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD"
+            echo "FIREBASE_API_KEY=$FIREBASE_API_KEY"
+            echo "FIREBASE_APP_ID=$FIREBASE_APP_ID"
+            echo "FIREBASE_PROJECT_ID=chitti-bd8ce"
+            echo "SAFE_BROWSING_API_KEY=$SAFE_BROWSING_API_KEY"
+            echo "BACKEND_URL=$BACKEND_URL"
+            echo "GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
+          } > local.properties
+
+      - name: Unit tests and release build
+        run: ./gradlew :app:testDebugUnitTest :app:assembleRelease --stacktrace
+
+      - name: Verify the signature and name the APK
+        id: apk
+        run: |
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+          src=app/build/outputs/apk/release/app-release.apk
+          "$apksigner" verify --print-certs "$src" | tee signers.txt
+          if ! grep -qi "SHA-256 digest: $EXPECTED_CERT_SHA256" signers.txt; then
+            echo "::error::APK is not signed with the Chitti release key"
+            exit 1
+          fi
+          out="chitti-v${{ steps.version.outputs.version }}.apk"
+          mv "$src" "$out"
+          sha256sum "$out" > "$out.sha256"
+          echo "file=$out" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "${{ steps.apk.outputs.file }}" "${{ steps.apk.outputs.file }}.sha256" \
+            --title "Chitti ${{ steps.version.outputs.version }}" \
+            --generate-notes \
+            --verify-tag
+
+      - name: Remove the signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/chitti-release.jks" local.properties

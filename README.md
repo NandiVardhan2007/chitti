@@ -175,6 +175,23 @@ On first launch:
 2. Tap **Preview Mode** to immediately explore all 9 screens with pre-loaded mock scenarios.
 3. Grant optional permissions when prompted (Camera for OCR, Alarms for Reminders, Calendar for Event sync).
 
+### 5. Versions & Releases
+- The version lives in one place: `chitti.versionName` in `gradle.properties` (`MAJOR.MINOR.PATCH`).
+  `versionCode` is derived from it (`MAJOR*10000 + MINOR*100 + PATCH`), so it always goes up.
+- **CI** (`.github/workflows/ci.yml`) runs the app's unit tests, a debug build and the backend tests on
+  every push to `main` and every pull request.
+- **Releases** (`.github/workflows/release.yml`): bump `chitti.versionName`, commit it on `main`, then
+  ```bash
+  git tag v1.1.0
+  git push origin v1.1.0
+  ```
+  The workflow checks the tag matches the version and is on `main`, builds the APK signed with the
+  release key, checks the certificate, and publishes `chitti-v1.1.0.apk` (plus its SHA-256) as a
+  GitHub Release.
+- The release key and app config come from repository secrets (listed at the top of `release.yml`).
+  Locally they sit in `local.properties`, which is never committed. Debug builds are signed with the
+  release key when it's present, so every build carries the same certificate fingerprint.
+
 ---
 
 ## 🧪 Testing with the AI Lab Simulator

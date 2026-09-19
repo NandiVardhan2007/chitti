@@ -13,6 +13,24 @@ val localProperties = Properties().apply {
     if (file.exists()) file.inputStream().use { load(it) }
 }
 
+// The one place the version lives: chitti.versionName in gradle.properties, as MAJOR.MINOR.PATCH.
+// versionCode is derived from it so every release is strictly greater than the last, and the
+// release workflow refuses a tag that doesn't match it.
+val chittiVersionName: String = providers.gradleProperty("chitti.versionName").get()
+val chittiVersionCode: Int = run {
+    val parts = Regex("""^(\d+)\.(\d+)\.(\d+)$""").matchEntire(chittiVersionName)?.groupValues?.drop(1)?.map(String::toInt)
+        ?: error("chitti.versionName must be MAJOR.MINOR.PATCH, got '$chittiVersionName'")
+    val (major, minor, patch) = parts
+    require(minor < 100 && patch < 100) { "minor and patch must stay below 100" }
+    major * 10_000 + minor * 100 + patch
+}
+
+// Release signing key, from local.properties (or written there by CI). Absent on machines
+// without the key: release builds then come out unsigned and debug builds use the debug key.
+val releaseKeystore: File? = localProperties.getProperty("RELEASE_STORE_FILE")
+    ?.let { rootProject.file(it) }
+    ?.takeIf { it.exists() }
+
 android {
     namespace = "com.owlcoders.chitti"
     compileSdk = 37
@@ -21,8 +39,8 @@ android {
         applicationId = "com.owlcoders.chitti"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = chittiVersionCode
+        versionName = chittiVersionName
 
         // Google Safe Browsing key, restricted in Cloud Console to this package + signing SHA-1.
         // Blank when absent: LinkGuard then checks links on the device only.
@@ -43,8 +61,25 @@ android {
         buildConfigField("String", "BACKEND_URL", local("BACKEND_URL"))
     }
 
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
+        // Debug builds are signed with the release key too when it's present, so the phone, the
+        // Firebase SHA fingerprints and the Safe Browsing key restriction all see one certificate.
+        debug {
+            signingConfigs.findByName("release")?.let { signingConfig = it }
+        }
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
