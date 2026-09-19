@@ -83,8 +83,10 @@ npm run dev              # node --env-file=.env --watch src/server.js
 curl localhost:8080/health
 ```
 
-Without `FIREBASE_SERVICE_ACCOUNT_BASE64` (allowed only when `NODE_ENV` is not `production`), ID tokens are still
-verified against Google's public keys, but revocation is not checked.
+Without `FIREBASE_SERVICE_ACCOUNT_BASE64`, ID tokens are still fully verified (signature, expiry, audience,
+issuer) against Google's public keys; only the revocation check is skipped, so a revoked session lasts at most
+until its token expires (one hour). If a service account is set, it must belong to `FIREBASE_PROJECT_ID` or the
+server refuses to start.
 
 ### Tests
 
@@ -106,8 +108,8 @@ upload rate limiting.
 |---|---|---|---|
 | `MONGODB_URI` | yes | - | Atlas `mongodb+srv://...` connection string |
 | `MONGODB_DB` | no | `chitti` | |
-| `FIREBASE_PROJECT_ID` | yes | - | `chitti-bd8ce` |
-| `FIREBASE_SERVICE_ACCOUNT_BASE64` | in production | - | base64 of the service-account JSON |
+| `FIREBASE_PROJECT_ID` | yes | - | `chitti-919e7` |
+| `FIREBASE_SERVICE_ACCOUNT_BASE64` | no | - | base64 of the service-account JSON; enables the revocation check |
 | `PORT` | no | `8080` | Render sets this |
 | `MAX_BACKUP_BYTES` | no | `52428800` (50 MB) | |
 | `LOG_LEVEL` | no | `info` | pino level |
@@ -129,9 +131,12 @@ upload rate limiting.
    `backups.files`, `backups.chunks`) are created automatically. Note that M0 has 512 MB of storage, so about ten
    users with 50 MB backups will fill it.
 
-### 2. Firebase service account
+### 2. Firebase service account (optional)
 
-1. Firebase console -> project **chitti-bd8ce** -> gear icon -> **Project settings** -> **Service accounts**.
+Skip this if the project forbids service-account keys ("Key creation is not allowed on this service
+account"); the backend works without it, see above.
+
+1. Firebase console -> project **chitti-919e7** -> gear icon -> **Project settings** -> **Service accounts**.
 2. **Generate new private key** -> confirm. A JSON file downloads. **Never commit it** (`.gitignore` blocks
    `service-account*.json` and `backend/*.json.key`, but keep it outside the repo anyway).
 3. Base64-encode it on one line:
@@ -148,8 +153,8 @@ upload rate limiting.
    (`rootDir: backend`, `npm ci`, `npm start`, health check `/health`).
    *(Or create it by hand: **New** -> **Web Service**, root directory `backend`, build `npm ci`, start `npm start`,
    instance type Free, health check path `/health`, and the env vars below.)*
-3. Render asks for the `sync: false` secrets: paste `MONGODB_URI` and `FIREBASE_SERVICE_ACCOUNT_BASE64`.
-   `NODE_ENV=production`, `FIREBASE_PROJECT_ID=chitti-bd8ce`, `MONGODB_DB` and `MAX_BACKUP_BYTES` are already set
+3. Render asks for the `sync: false` secrets: paste `MONGODB_URI` (and `FIREBASE_SERVICE_ACCOUNT_BASE64` if you
+   made one). `NODE_ENV=production`, `FIREBASE_PROJECT_ID=chitti-919e7`, `MONGODB_DB` and `MAX_BACKUP_BYTES` are already set
    by the Blueprint.
 4. Deploy, then check `https://<service>.onrender.com/health` returns `{"ok":true}`. Put that base URL into the
    Android app's backend setting.

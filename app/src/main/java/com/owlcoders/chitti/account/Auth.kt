@@ -54,7 +54,8 @@ object Auth {
     private const val TAG = "ChittiAuth"
 
     val isConfigured: Boolean
-        get() = BuildConfig.FIREBASE_API_KEY.isNotBlank() && BuildConfig.FIREBASE_APP_ID.isNotBlank()
+        get() = BuildConfig.FIREBASE_API_KEY.isNotBlank() && BuildConfig.FIREBASE_APP_ID.isNotBlank() &&
+            BuildConfig.FIREBASE_PROJECT_ID.isNotBlank()
 
     val googleConfigured: Boolean get() = isConfigured && BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank()
 

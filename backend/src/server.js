@@ -15,23 +15,28 @@ function required(name) {
   return value;
 }
 
-const production = process.env.NODE_ENV === 'production';
 const mongoUri = required('MONGODB_URI');
 const projectId = required('FIREBASE_PROJECT_ID');
-const serviceAccountB64 = production ? required('FIREBASE_SERVICE_ACCOUNT_BASE64') : process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+const serviceAccountB64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
 const maxBackupBytes = Number(process.env.MAX_BACKUP_BYTES) || 52428800;
 const port = Number(process.env.PORT) || 8080;
 
-// Signature checks only need the project id (Google's public keys); the revocation check calls the
-// Firebase Auth API and therefore needs the service account.
-let checkRevoked = true;
+// Signature, expiry, audience and issuer checks only need the project id (Google's public keys).
+// The service account adds one thing: the revocation check, which calls the Firebase Auth API.
+// It is optional because some projects forbid service-account keys; ID tokens expire within an
+// hour, so without it a revoked session can last at most that long.
+let checkRevoked = false;
 if (serviceAccountB64) {
   const serviceAccount = JSON.parse(Buffer.from(serviceAccountB64, 'base64').toString('utf8'));
+  if (serviceAccount.project_id !== projectId) {
+    logger.fatal(`FIREBASE_SERVICE_ACCOUNT_BASE64 is for project ${serviceAccount.project_id}, not ${projectId}`);
+    process.exit(1);
+  }
   initializeApp({ credential: cert(serviceAccount), projectId });
+  checkRevoked = true;
 } else {
   initializeApp({ projectId });
-  checkRevoked = false;
-  logger.warn('FIREBASE_SERVICE_ACCOUNT_BASE64 not set: ID tokens are verified but revocation is NOT checked (dev only)');
+  logger.info('No service account: ID tokens are verified, revocation is not checked');
 }
 const firebaseAuth = getAuth();
 const verifyToken = (idToken) => firebaseAuth.verifyIdToken(idToken, checkRevoked);

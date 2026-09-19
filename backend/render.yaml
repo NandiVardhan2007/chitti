@@ -20,8 +20,6 @@ services:
       - key: MONGODB_DB
         value: chitti
       - key: FIREBASE_PROJECT_ID
-        value: chitti-bd8ce
-      - key: FIREBASE_SERVICE_ACCOUNT_BASE64
-        sync: false
+        value: chitti-919e7
       - key: MAX_BACKUP_BYTES
         value: "52428800"

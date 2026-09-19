@@ -7,8 +7,7 @@
 #
 # Repository secrets used:
 #   RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD
-#   FIREBASE_API_KEY, FIREBASE_APP_ID, SAFE_BROWSING_API_KEY, BACKEND_URL
-#   GOOGLE_WEB_CLIENT_ID (optional: Google sign-in is hidden in the app while it's empty)
+#   FIREBASE_API_KEY, FIREBASE_APP_ID, FIREBASE_PROJECT_ID, GOOGLE_WEB_CLIENT_ID, SAFE_BROWSING_API_KEY, BACKEND_URL
 name: Release
 
 on:
@@ -68,12 +67,13 @@ jobs:
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           SAFE_BROWSING_API_KEY: ${{ secrets.SAFE_BROWSING_API_KEY }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: |
           for name in RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD \
-                      FIREBASE_API_KEY FIREBASE_APP_ID SAFE_BROWSING_API_KEY BACKEND_URL; do
+                      FIREBASE_API_KEY FIREBASE_APP_ID FIREBASE_PROJECT_ID SAFE_BROWSING_API_KEY BACKEND_URL GOOGLE_WEB_CLIENT_ID; do
             if [ -z "${!name}" ]; then echo "::error::Repository secret $name is not set"; exit 1; fi
           done
           keystore="$RUNNER_TEMP/chitti-release.jks"
@@ -86,7 +86,7 @@ jobs:
             echo "RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD"
             echo "FIREBASE_API_KEY=$FIREBASE_API_KEY"
             echo "FIREBASE_APP_ID=$FIREBASE_APP_ID"
-            echo "FIREBASE_PROJECT_ID=chitti-bd8ce"
+            echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID"
             echo "SAFE_BROWSING_API_KEY=$SAFE_BROWSING_API_KEY"
             echo "BACKEND_URL=$BACKEND_URL"
             echo "GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
