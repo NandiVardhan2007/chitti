@@ -10,34 +10,18 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Accessibility
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.Accessibility
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,42 +33,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.owlcoders.chitti.services.ChittiAccessibilityService
-import com.owlcoders.chitti.ui.components.BlurText
-import com.owlcoders.chitti.ui.components.ChittiMotion
-import com.owlcoders.chitti.ui.components.ChittiSurfaceCard
-import com.owlcoders.chitti.ui.components.MeterRow
-import com.owlcoders.chitti.ui.components.rememberHaptics
-import com.owlcoders.chitti.ui.components.HairlineDivider
-import com.owlcoders.chitti.ui.components.ListRow
+import com.owlcoders.chitti.ui.components.Inset
+import com.owlcoders.chitti.ui.components.InsetRow
+import com.owlcoders.chitti.ui.components.LargeTitleScaffold
+import com.owlcoders.chitti.ui.components.LargeTitleSubtitle
+import com.owlcoders.chitti.ui.components.LinkButton
+import com.owlcoders.chitti.ui.components.Motion
 import com.owlcoders.chitti.ui.components.PrimaryButton
-import com.owlcoders.chitti.ui.components.ScreenScaffold
-import com.owlcoders.chitti.ui.components.SecondaryButton
 import com.owlcoders.chitti.ui.components.Space
-import com.owlcoders.chitti.ui.components.StatusPill
-import com.owlcoders.chitti.ui.components.pressScale
-import com.owlcoders.chitti.ui.components.staggeredEntrance
-import com.owlcoders.chitti.ui.theme.Accent
-import com.owlcoders.chitti.ui.theme.AccentBright
-import com.owlcoders.chitti.ui.theme.AmbientGlow
-import com.owlcoders.chitti.ui.theme.HairlineStrong
-import com.owlcoders.chitti.ui.theme.Hairline
-import com.owlcoders.chitti.ui.theme.Mint
-import com.owlcoders.chitti.ui.theme.Surface2
-import com.owlcoders.chitti.ui.theme.TextHigh
-import com.owlcoders.chitti.ui.theme.TextLow
-import com.owlcoders.chitti.ui.theme.TextMid
+import com.owlcoders.chitti.ui.components.insetSection
+import com.owlcoders.chitti.ui.components.rememberHaptics
+import com.owlcoders.chitti.ui.theme.Chitti
 
+/**
+ * First run. One grouped list of what Chitti needs and why, each row turning from "Allow" to "On"
+ * in place as the grant lands (with a confirm haptic on that frame). Continue unlocks once the
+ * three required grants are in; "Not now" lets someone look around first.
+ */
 @Composable
 fun PermissionsOnboardingScreen(
     onAllPermissionsGranted: () -> Unit
@@ -94,7 +67,7 @@ fun PermissionsOnboardingScreen(
     var hasMic by remember { mutableStateOf(checkMicPermission(context)) }
     var hasNotification by remember { mutableStateOf(checkNotificationPermission(context)) }
     var hasAccessibility by remember { mutableStateOf(checkAccessibilityPermission(context)) }
-    // Optional on this screen, but required on Android 13+ for reminders and LinkGuard alerts.
+    // Optional here, but required on Android 13+ for reminders and LinkGuard alerts.
     var hasPostNotifications by remember { mutableStateOf(checkPostNotificationsPermission(context)) }
 
     fun refresh() {
@@ -104,185 +77,82 @@ fun PermissionsOnboardingScreen(
         hasPostNotifications = checkPostNotificationsPermission(context)
     }
 
-    val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        hasMic = it
-    }
-    val postNotificationsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        hasPostNotifications = it
-    }
+    val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasMic = it }
+    val postLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasPostNotifications = it }
 
-    // Notification-listener and accessibility grants happen in system Settings; re-check when we
-    // come back so the user does not have to press Refresh.
+    // Listener and accessibility grants happen in system Settings; re-check on return.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) refresh()
-        }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) refresh() }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Ask for POST_NOTIFICATIONS once, right away, on Android 13+.
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= 33 && !hasPostNotifications) {
-            postNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            postLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
-    LaunchedEffect(hasMic, hasNotification, hasAccessibility) {
-        if (hasMic && hasNotification && hasAccessibility) {
-            onAllPermissionsGranted()
+    val ready = hasMic && hasNotification && hasAccessibility
+    LaunchedEffect(ready) { if (ready) onAllPermissionsGranted() }
+
+    LargeTitleScaffold(
+        title = "Set up Chitti",
+        subtitle = {
+            LargeTitleSubtitle("An assistant that runs on your phone. It needs a few things to listen, read what arrives and act for you.")
         }
-    }
-
-    val skipInteraction = remember { MutableInteractionSource() }
-
-    ScreenScaffold {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Space.gutter)
-                .padding(bottom = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        insetSection(
+            key = "required",
+            header = "Needed",
+            footer = "Everything Chitti reads stays on this phone."
         ) {
-            Spacer(Modifier.height(Space.xxxl))
-
-            // Hero: app mark sitting in one quiet accent glow, the wordmark arriving out of a blur,
-            // one line of copy.
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.staggeredEntrance(0)) {
-                Box(
-                    modifier = Modifier
-                        .size(140.dp)
-                        .background(AmbientGlow)
-                )
-                Box(
-                    modifier = Modifier
-                        .size(68.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(Surface2)
-                        .border(1.dp, HairlineStrong, RoundedCornerShape(22.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Filled.AutoAwesome,
-                        contentDescription = null,
-                        tint = AccentBright,
-                        modifier = Modifier.size(30.dp)
-                    )
+            row("mic", Inset.iconInset) {
+                GrantRow("Microphone", "So you can talk to it", Icons.Rounded.Mic, hasMic) {
+                    micLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 }
             }
-
-            Spacer(Modifier.height(Space.s))
-
-            BlurText(
-                text = "Chitti",
-                style = MaterialTheme.typography.displayLarge,
-                color = TextHigh
-            )
-
-            Spacer(Modifier.height(Space.s))
-
-            Text(
-                text = "An assistant that runs on your phone. Grant these so it can listen, read what arrives and act for you.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextMid,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.staggeredEntrance(2)
-            )
-
-            Spacer(Modifier.height(Space.xxl))
-
-            // Progress through the three required grants, so the goal and the distance to it are visible.
-            val granted = listOf(hasMic, hasNotification, hasAccessibility).count { it }
-            MeterRow(
-                label = if (granted == 3) "All set" else "Required access",
-                value = granted,
-                total = 3,
-                tint = if (granted == 3) Mint else Accent,
-                modifier = Modifier
-                    .padding(horizontal = Space.xs)
-                    .staggeredEntrance(3)
-            )
-
-            Spacer(Modifier.height(Space.m))
-
-            ChittiSurfaceCard(
-                modifier = Modifier.staggeredEntrance(4),
-                contentPadding = PaddingValues(horizontal = Space.l, vertical = Space.xs)
-            ) {
-                PermissionItem(
-                    title = "Microphone",
-                    description = "Hear your voice commands.",
-                    icon = Icons.Filled.Mic,
-                    isGranted = hasMic,
-                    onClick = { micLauncher.launch(Manifest.permission.RECORD_AUDIO) }
-                )
-
-                HairlineDivider(inset = 44.dp)
-
-                PermissionItem(
-                    title = "Notification access",
-                    description = "Turn incoming messages into tasks.",
-                    icon = Icons.Filled.Notifications,
-                    isGranted = hasNotification,
-                    onClick = { openSettingsSafely(context, Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
-                )
-
-                HairlineDivider(inset = 44.dp)
-
-                PermissionItem(
-                    title = "Accessibility service",
-                    description = "Tap and type on your behalf.",
-                    icon = Icons.Filled.Accessibility,
-                    isGranted = hasAccessibility,
-                    onClick = { openSettingsSafely(context, Settings.ACTION_ACCESSIBILITY_SETTINGS) }
-                )
-
-                if (Build.VERSION.SDK_INT >= 33) {
-                    HairlineDivider(inset = 44.dp)
-
-                    PermissionItem(
-                        title = "Show notifications",
-                        description = "Reminders and suspicious-link alerts. Optional.",
-                        icon = Icons.Filled.NotificationsActive,
-                        isGranted = hasPostNotifications,
-                        onClick = { postNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }
-                    )
+            row("listener", Inset.iconInset) {
+                GrantRow("Notification access", "So it can turn messages into things to do", Icons.Rounded.Notifications, hasNotification) {
+                    openSettingsSafely(context, Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                 }
             }
-
-            Spacer(Modifier.height(Space.xxl))
-
-            PrimaryButton(
-                text = "Continue",
-                modifier = Modifier.staggeredEntrance(5),
-                onClick = {
-                    refresh()
-                    if (hasMic && hasNotification && hasAccessibility) {
-                        onAllPermissionsGranted()
+            row("a11y", Inset.iconInset) {
+                GrantRow("Accessibility", "So it can tap and type for you", Icons.Rounded.Accessibility, hasAccessibility) {
+                    openSettingsSafely(context, Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                }
+            }
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            insetSection(key = "optional", header = "Optional", footer = "For reminders and warnings about suspicious links.") {
+                row("post", Inset.iconInset) {
+                    GrantRow("Show notifications", null, Icons.Rounded.NotificationsActive, hasPostNotifications) {
+                        postLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
                 }
-            )
-
-            Spacer(Modifier.height(Space.m))
-
-            // Bypass, kept for testing and for users who want to look around first.
-            Text(
-                text = "Skip for now",
-                style = MaterialTheme.typography.labelLarge,
-                color = TextLow,
+            }
+        }
+        item(key = "actions") {
+            Column(
                 modifier = Modifier
-                    .pressScale(skipInteraction, pressed = 0.97f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .clickable(
-                        interactionSource = skipInteraction,
-                        indication = null,
-                        onClick = onAllPermissionsGranted
-                    )
-                    .padding(horizontal = Space.l, vertical = Space.m)
-            )
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = Space.gutter)
+                    .padding(top = Space.xxl),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                PrimaryButton(
+                    text = "Continue",
+                    enabled = ready,
+                    onClick = {
+                        refresh()
+                        if (hasMic && hasNotification && hasAccessibility) onAllPermissionsGranted()
+                    }
+                )
+                // Kept for testing, and for anyone who wants to look around first.
+                LinkButton(text = "Not now", onClick = onAllPermissionsGranted)
+            }
         }
     }
 }
@@ -298,41 +168,32 @@ private fun openSettingsSafely(context: Context, action: String) {
     }
 }
 
-/** One permission: icon well, name, one-line reason, and either a Granted pill or a Grant button. */
+/** A grant: what it is, why, and "Allow" that becomes "On" where it was tapped. */
 @Composable
-fun PermissionItem(
-    title: String,
-    description: String,
-    icon: ImageVector,
-    isGranted: Boolean,
-    onClick: () -> Unit
-) {
-    // A grant that lands while the screen is open is confirmed where it happened: the button
-    // turns into the pill in place, with a confirm haptic on the same frame.
+private fun GrantRow(title: String, reason: String?, icon: ImageVector, granted: Boolean, onAllow: () -> Unit) {
+    val colors = Chitti.colors
     val haptics = rememberHaptics()
-    var wasGranted by remember { mutableStateOf(isGranted) }
-    LaunchedEffect(isGranted) {
-        if (isGranted && !wasGranted) haptics.confirm()
-        wasGranted = isGranted
+    var wasGranted by remember { mutableStateOf(granted) }
+    LaunchedEffect(granted) {
+        if (granted && !wasGranted) haptics.confirm()
+        wasGranted = granted
     }
-    ListRow(
+    InsetRow(
         title = title,
-        subtitle = description,
+        subtitle = reason,
         icon = icon,
-        iconTint = if (isGranted) Mint else Accent,
+        iconTint = if (granted) colors.success else colors.accent,
+        onClick = if (granted) null else onAllow,
         trailing = {
             AnimatedContent(
-                targetState = isGranted,
-                transitionSpec = {
-                    (fadeIn(tween(160)) + scaleIn(ChittiMotion.settle(), initialScale = 0.8f)) togetherWith
-                        fadeOut(tween(100))
-                },
+                targetState = granted,
+                transitionSpec = { fadeIn(Motion.fade()) togetherWith fadeOut(Motion.fade(120)) },
                 label = "grant"
-            ) { granted ->
-                if (granted) {
-                    StatusPill(text = "Granted", tint = Mint, icon = Icons.Filled.Check)
+            ) { on ->
+                if (on) {
+                    Text("On", style = MaterialTheme.typography.bodyLarge, color = colors.success)
                 } else {
-                    SecondaryButton(text = "Grant", onClick = onClick)
+                    LinkButton(text = "Allow", onClick = onAllow)
                 }
             }
         }

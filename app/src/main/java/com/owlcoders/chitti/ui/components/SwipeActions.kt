@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,6 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.owlcoders.chitti.ui.theme.Chitti
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -74,7 +74,7 @@ fun SwipeActionBox(
     modifier: Modifier = Modifier,
     startAction: SwipeAction? = null,
     endAction: SwipeAction? = null,
-    shape: Shape = RoundedCornerShape(16.dp),
+    shape: Shape = LocalInsetCellShape.current,
     content: @Composable () -> Unit
 ) {
     val offset = remember { Animatable(0f) }
@@ -134,23 +134,23 @@ fun SwipeActionBox(
                             if (commit && action != null) {
                                 haptics.confirm()
                                 if (action.removes) {
-                                    offset.animateTo(sign(projected) * widthPx * 1.15f, ChittiMotion.Settle, initialVelocity = v)
+                                    offset.animateTo(sign(projected) * widthPx * 1.15f, Motion.standard(), initialVelocity = v)
                                     action.onCommit()
                                     // If the row is not actually removed, do not leave it off-screen.
                                     delay(700)
                                     offset.snapTo(0f)
                                 } else {
                                     action.onCommit()
-                                    offset.animateTo(0f, ChittiMotion.Sheet, initialVelocity = v)
+                                    offset.animateTo(0f, Motion.momentum(), initialVelocity = v)
                                 }
                             } else {
-                                offset.animateTo(0f, ChittiMotion.Sheet, initialVelocity = v)
+                                offset.animateTo(0f, Motion.momentum(), initialVelocity = v)
                             }
                         }
                     },
                     onDragCancel = {
                         armed = false
-                        scope.launch { offset.animateTo(0f, ChittiMotion.Sheet) }
+                        scope.launch { offset.animateTo(0f, Motion.momentum()) }
                     }
                 )
             }
@@ -163,12 +163,12 @@ fun SwipeActionBox(
         }
         if (revealed != null) {
             val progress = (abs(x) / threshold()).coerceIn(0f, 1f)
-            val pop by animateFloatAsState(if (armed) 1f else 0f, ChittiMotion.Press, label = "swipePop")
+            val pop by animateFloatAsState(if (armed) 1f else 0f, Motion.snappy(), label = "swipePop")
             Box(
                 modifier = Modifier
                     .matchParentSize()
                     .clip(shape)
-                    .background(revealed.tint.copy(alpha = 0.08f + 0.14f * progress)),
+                    .background(revealed.tint.copy(alpha = 0.10f + 0.18f * progress)),
                 contentAlignment = if (x > 0f) Alignment.CenterStart else Alignment.CenterEnd
             ) {
                 Row(
@@ -193,7 +193,12 @@ fun SwipeActionBox(
                 }
             }
         }
-        Box(modifier = Modifier.offset { IntOffset(offset.value.roundToInt(), 0) }) {
+        // Opaque, so the action underneath is only visible where the row has moved away from it.
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(offset.value.roundToInt(), 0) }
+                .background(Chitti.colors.surface)
+        ) {
             content()
         }
     }

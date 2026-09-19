@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.owlcoders.chitti.ui.theme.Chitti
 import com.owlcoders.chitti.ui.theme.ChittiTheme
 
 /**
@@ -139,7 +140,7 @@ private fun WarningScreen(
     onProceed: () -> Unit
 ) {
     val danger = verdict.level == LinkScanner.RiskLevel.DANGER
-    val accent = if (danger) Color(0xFFD32F2F) else Color(0xFFF59E0B)
+    val accent = if (danger) Chitti.colors.danger else Chitti.colors.warning
     val icon = if (danger) Icons.Filled.GppBad else Icons.Filled.GppMaybe
     val headline = if (danger) "Dangerous link blocked" else "Open this link carefully"
     val sub = if (danger)
@@ -176,7 +177,7 @@ private fun WarningScreen(
             Spacer(Modifier.height(20.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(Modifier.padding(16.dp)) {
@@ -220,7 +221,7 @@ private fun WarningScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                shape = RoundedCornerShape(14.dp)
+                shape = CircleShape
             ) {
                 Text("Go back — keep me safe", fontWeight = FontWeight.SemiBold)
             }

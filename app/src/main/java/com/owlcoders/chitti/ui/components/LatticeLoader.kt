@@ -148,8 +148,8 @@ fun LatticeLoader(
 
     // Run layer fades out and the mark layer materialises (scale 0.9 -> 1) on done/error.
     val working = status == LatticeStatus.WORKING
-    val runAlpha by animateFloatAsState(if (working) 1f else 0f, tween(200), label = "run")
-    val markAlpha by animateFloatAsState(if (working) 0f else 1f, tween(200), label = "mark")
+    val runAlpha by animateFloatAsState(if (working) 1f else 0f, Motion.fade(200), label = "run")
+    val markAlpha by animateFloatAsState(if (working) 0f else 1f, Motion.fade(200), label = "mark")
     val markScale by animateFloatAsState(
         if (working && !reduceMotion) 0.9f else 1f,
         spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),

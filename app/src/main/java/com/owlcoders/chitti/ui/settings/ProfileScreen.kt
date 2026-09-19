@@ -2,26 +2,16 @@ package com.owlcoders.chitti.ui.settings
 
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import android.widget.Toast
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AlternateEmail
-import androidx.compose.material.icons.filled.Cake
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.rounded.Password
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,218 +23,166 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.owlcoders.chitti.db.AppDatabase
 import com.owlcoders.chitti.db.entities.UserProfile
-import com.owlcoders.chitti.ui.components.ChittiSurfaceCard
-import com.owlcoders.chitti.ui.components.ChittiTextField
-import com.owlcoders.chitti.ui.components.PrimaryButton
-import com.owlcoders.chitti.ui.components.ScreenHeader
-import com.owlcoders.chitti.ui.components.ScreenScaffold
-import com.owlcoders.chitti.ui.components.SecondaryButton
-import com.owlcoders.chitti.ui.components.SectionLabel
+import com.owlcoders.chitti.ui.components.Inset
+import com.owlcoders.chitti.ui.components.InsetRow
+import com.owlcoders.chitti.ui.components.LargeTitleScaffold
+import com.owlcoders.chitti.ui.components.LargeTitleSubtitle
+import com.owlcoders.chitti.ui.components.LinkButton
 import com.owlcoders.chitti.ui.components.Space
-import com.owlcoders.chitti.ui.components.StatusPill
-import com.owlcoders.chitti.ui.components.staggeredEntrance
-import com.owlcoders.chitti.ui.theme.Accent
-import com.owlcoders.chitti.ui.theme.Mint
-import com.owlcoders.chitti.ui.theme.TextHigh
-import com.owlcoders.chitti.ui.theme.TextMid
-import kotlinx.coroutines.delay
+import com.owlcoders.chitti.ui.components.insetSection
+import com.owlcoders.chitti.ui.components.rememberHaptics
+import com.owlcoders.chitti.ui.theme.Chitti
 import kotlinx.coroutines.launch
 
+/**
+ * Profile: the details Chitti's autofill puts into forms in other apps. Laid out as an iOS form:
+ * each group holds labelled fields, label on the left, value on the right. Save lives in the bar
+ * and wakes up only when something has changed.
+ */
 @Composable
 fun ProfileScreen() {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
+    val haptics = rememberHaptics()
     val db = remember { AppDatabase.getDatabase(context) }
 
+    var saved by remember { mutableStateOf(UserProfile()) }
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
     var dob by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
 
-    var isLoading by remember { mutableStateOf(true) }
-    var showSavedMessage by remember { mutableStateOf(false) }
-
-    // Load initial profile data. getUserProfileSync() is a suspend DAO call, so Room
-    // already runs it on its own executor; the Compose state writes stay on Main.
     LaunchedEffect(Unit) {
-        val profile = db.userProfileDao().getUserProfileSync()
-        if (profile != null) {
-            firstName = profile.firstName
-            lastName = profile.lastName
-            email = profile.email
-            phoneNumber = profile.phoneNumber
-            address = profile.address
-            dob = profile.dateOfBirth
-        }
-        isLoading = false
+        val profile = db.userProfileDao().getUserProfileSync() ?: UserProfile()
+        saved = profile
+        firstName = profile.firstName
+        lastName = profile.lastName
+        email = profile.email
+        phone = profile.phoneNumber
+        dob = profile.dateOfBirth
+        address = profile.address
     }
 
-    // Auto-hide the "saved" confirmation instead of leaving it on screen forever.
-    LaunchedEffect(showSavedMessage) {
-        if (showSavedMessage) {
-            delay(2500)
-            showSavedMessage = false
-        }
-    }
+    val current = UserProfile(
+        id = 1,
+        firstName = firstName.trim(),
+        lastName = lastName.trim(),
+        email = email.trim(),
+        phoneNumber = phone.trim(),
+        address = address.trim(),
+        dateOfBirth = dob.trim()
+    )
+    val dirty = current != saved.copy(id = 1)
 
-    ScreenScaffold {
-        ScreenHeader(
-            title = "Profile",
-            subtitle = "Used by Chitti's autofill to complete forms for you"
-        )
-
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Accent)
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(bottom = 24.dp)
-            ) {
-                SectionLabel("Your details")
-                ChittiSurfaceCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Space.gutter)
-                        .staggeredEntrance(0)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(Space.m)) {
-                        ChittiTextField(
-                            value = firstName,
-                            onValueChange = { firstName = it },
-                            placeholder = "First name",
-                            label = "First name",
-                            leadingIcon = Icons.Filled.Person
-                        )
-                        ChittiTextField(
-                            value = lastName,
-                            onValueChange = { lastName = it },
-                            placeholder = "Last name",
-                            label = "Last name",
-                            leadingIcon = Icons.Filled.Person
-                        )
-                        ChittiTextField(
-                            value = email,
-                            onValueChange = { email = it },
-                            placeholder = "you@example.com",
-                            label = "Email",
-                            leadingIcon = Icons.Filled.AlternateEmail
-                        )
-                        ChittiTextField(
-                            value = phoneNumber,
-                            onValueChange = { phoneNumber = it },
-                            placeholder = "Phone number",
-                            label = "Phone",
-                            leadingIcon = Icons.Filled.Phone
-                        )
-                        ChittiTextField(
-                            value = dob,
-                            onValueChange = { dob = it },
-                            placeholder = "DD/MM/YYYY",
-                            label = "Date of birth",
-                            leadingIcon = Icons.Filled.Cake
-                        )
-                        ChittiTextField(
-                            value = address,
-                            onValueChange = { address = it },
-                            placeholder = "Street, city, postcode",
-                            label = "Address",
-                            leadingIcon = Icons.Filled.Home,
-                            singleLine = false
-                        )
+    LargeTitleScaffold(
+        title = "Your details",
+        subtitle = { LargeTitleSubtitle("Only used to fill forms, and only on this phone.") },
+        actions = {
+            LinkButton(
+                text = "Save",
+                enabled = dirty,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(end = Space.s),
+                onClick = {
+                    scope.launch {
+                        db.userProfileDao().insertOrUpdateProfile(current)
+                        saved = current
+                        haptics.confirm()
                     }
-
-                    Spacer(Modifier.height(Space.l))
-
-                    PrimaryButton(
-                        text = "Save profile",
-                        onClick = {
-                            coroutineScope.launch {
-                                val newProfile = UserProfile(
-                                    id = 1,
-                                    firstName = firstName,
-                                    lastName = lastName,
-                                    email = email,
-                                    phoneNumber = phoneNumber,
-                                    address = address,
-                                    dateOfBirth = dob
-                                )
-                                db.userProfileDao().insertOrUpdateProfile(newProfile)
-                                showSavedMessage = true
+                }
+            )
+        }
+    ) {
+        insetSection(key = "name", header = "Name") {
+            row("first") { FieldRow("First", firstName, { firstName = it }, "First name", capitalize = true) }
+            row("last") { FieldRow("Last", lastName, { lastName = it }, "Last name", capitalize = true) }
+        }
+        insetSection(key = "contact", header = "Contact") {
+            row("email") { FieldRow("Email", email, { email = it }, "you@example.com", KeyboardType.Email) }
+            row("phone") { FieldRow("Phone", phone, { phone = it }, "Number", KeyboardType.Phone) }
+        }
+        insetSection(key = "more", header = "More") {
+            row("dob") { FieldRow("Birthday", dob, { dob = it }, "DD/MM/YYYY", KeyboardType.Number) }
+            row("address") { FieldRow("Address", address, { address = it }, "Street, city, postcode", singleLine = false, capitalize = true) }
+        }
+        insetSection(
+            key = "autofill",
+            footer = "Set Chitti as Android's autofill service and it fills these into forms in other apps. They never leave this device."
+        ) {
+            row("autofill", Inset.iconInset) {
+                InsetRow(
+                    title = "Use Chitti for autofill",
+                    icon = Icons.Rounded.Password,
+                    chevron = true,
+                    onClick = {
+                        val intent = Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE).setData(android.net.Uri.parse("package:${context.packageName}"))
+                        try {
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            try {
+                                context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                            } catch (e2: Exception) {
+                                Toast.makeText(context, "Could not open system settings", Toast.LENGTH_SHORT).show()
                             }
-                        },
-                        fill = true
-                    )
-
-                    AnimatedVisibility(
-                        visible = showSavedMessage,
-                        enter = fadeIn(),
-                        exit = fadeOut()
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = Space.m),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            StatusPill(text = "Profile saved", tint = Mint, icon = Icons.Filled.Check)
                         }
                     }
-                }
-
-                SectionLabel("Autofill")
-                ChittiSurfaceCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Space.gutter)
-                        .staggeredEntrance(1)
-                ) {
-                    Text(
-                        text = "Chitti Autofill",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = TextHigh
-                    )
-                    Spacer(Modifier.height(Space.xs))
-                    Text(
-                        text = "Set Chitti as your system autofill service and it will fill these details into forms in other apps. The details never leave this device.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextMid
-                    )
-                    Spacer(Modifier.height(Space.l))
-                    SecondaryButton(
-                        text = "Open autofill settings",
-                        onClick = {
-                            val intent = Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE)
-                            intent.data = android.net.Uri.parse("package:${context.packageName}")
-                            try {
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                try {
-                                    context.startActivity(Intent(Settings.ACTION_SETTINGS))
-                                } catch (e2: Exception) {
-                                    android.widget.Toast.makeText(context, "Could not open system settings", android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        },
-                        fill = true
-                    )
-                }
+                )
             }
         }
+    }
+}
+
+/** A labelled field inside a group row: label left, editable value filling the rest. */
+@Composable
+private fun FieldRow(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    singleLine: Boolean = true,
+    capitalize: Boolean = false
+) {
+    val colors = Chitti.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = Inset.rowMinHeight)
+            .padding(horizontal = Inset.textInset, vertical = Space.m),
+        verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = colors.textHigh, modifier = Modifier.width(96.dp))
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = singleLine,
+            maxLines = if (singleLine) 1 else 4,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.textHigh),
+            cursorBrush = SolidColor(colors.accent),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardType,
+                imeAction = if (singleLine) ImeAction.Next else ImeAction.Default,
+                capitalization = if (capitalize) KeyboardCapitalization.Words else KeyboardCapitalization.None
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .semantics { contentDescription = label },
+            decorationBox = { inner ->
+                if (value.isEmpty()) Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = colors.textLow)
+                inner()
+            }
+        )
     }
 }

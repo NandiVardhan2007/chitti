@@ -1,49 +1,84 @@
 package com.owlcoders.chitti.ui.components
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.foundation.Canvas
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.owlcoders.chitti.automation.AssistantResponse
-import com.owlcoders.chitti.ui.theme.*
+import com.owlcoders.chitti.ui.theme.Chitti
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 private val VoiceExamples = listOf(
-    "\"Open WhatsApp\"",
-    "\"Remind me to call mom in 30 minutes\"",
-    "\"What's pending?\"",
-    "\"Turn on the flashlight\""
+    "“Open WhatsApp”",
+    "“Remind me to call mom in 30 minutes”",
+    "“What's pending?”",
+    "“Turn on the flashlight”"
 )
 
 enum class VoiceAssistantState {
@@ -51,499 +86,306 @@ enum class VoiceAssistantState {
 }
 
 /**
- * The assistant sheet. Motion follows Apple's fluid-interface rules:
- *  - the sheet tracks the finger 1:1 while dragging (respecting where it was grabbed);
- *  - pulling up past the top rubber-bands instead of stopping hard;
- *  - on release the finger's velocity is projected forward to decide between settle and
- *    dismiss, and handed to the spring so there is no seam between drag and animation;
- *  - the scrim dims in proportion to how far the sheet has been pulled;
- *  - everything is interruptible (the sheet can be grabbed mid-settle).
+ * The voice overlay: the one place glass covers content, because here the overlay is the control.
+ *
+ *  - It materialises: blur, tint and content arrive together on one spring, and leave the same way.
+ *  - One shape in the middle breathes with the real microphone level (smoothed by a spring so it
+ *    has weight); with no level to follow it pulses slowly.
+ *  - The transcript streams in as it is recognised: partial words in secondary text with a soft
+ *    caret, the final sentence in primary text. No spinner sits between speech and text.
+ *  - Cancel is at the bottom, where the thumb already is, and cancels for real (MainActivity stops
+ *    the recogniser, the running query and speech). Back and a downward throw do the same.
+ *  - Haptics: confirm when listening starts, a tick on the first recognised words, confirm on a
+ *    completed action, reject on a failure.
  */
 @Composable
-fun GeminiVoiceOverlay(
+fun VoiceOverlay(
     state: VoiceAssistantState,
     transcript: String,
-    rmsLevel: Float, // 0.0f to 1.0f from mic
-    assistantResponse: AssistantResponse? = null,
-    onMicClick: () -> Unit = {},
-    onDismiss: () -> Unit = {},
-    onStopSpeech: () -> Unit = {},
-    onDocumentClick: (String) -> Unit = {}
+    rmsLevel: Float,
+    assistantResponse: AssistantResponse?,
+    onMicClick: () -> Unit,
+    onDismiss: () -> Unit,
+    onStopSpeech: () -> Unit
 ) {
     val visible = state != VoiceAssistantState.IDLE
-    // Back must close the overlay (and stop the mic/TTS via onDismiss) instead of navigating
-    // underneath it while it keeps listening.
     BackHandler(enabled = visible, onBack = onDismiss)
 
-    val reduceMotion = rememberReducedMotion()
+    val colors = Chitti.colors
+    val haptics = rememberHaptics()
     val scope = rememberCoroutineScope()
-    val dragOffset = remember { Animatable(0f) } // px; > 0 pulled down, < 0 pulled up (rubber-banded)
-    var sheetHeightPx by remember { mutableFloatStateOf(1f) }
-    var dismissing by remember { mutableStateOf(false) }
+    val appear by animateFloatAsState(if (visible) 1f else 0f, Motion.standard(), label = "overlayAppear")
+    if (appear <= 0.001f && !visible) return
 
-    LaunchedEffect(visible) {
-        if (visible) {
-            dismissing = false
-            dragOffset.snapTo(0f)
+    // ------------------------------------------------------------------ haptics
+    LaunchedEffect(state) {
+        if (state == VoiceAssistantState.LISTENING) haptics.confirm()
+    }
+    var heardSomething by remember { mutableStateOf(false) }
+    LaunchedEffect(state, transcript.isNotBlank()) {
+        if (state == VoiceAssistantState.LISTENING) {
+            if (transcript.isNotBlank() && !heardSomething) haptics.clockTick()
+            heardSomething = transcript.isNotBlank()
         }
     }
-
-    // Completion feedback on the frame the outcome appears: a confirm for a done action, a
-    // reject for a failure. Plain answers get none (utility: not every reply is an event).
-    val haptics = rememberHaptics()
     LaunchedEffect(assistantResponse) {
         val r = assistantResponse ?: return@LaunchedEffect
-        if (r.actionLabel != null) {
-            if (r.actionSuccess) haptics.confirm() else haptics.reject()
-        } else if (!r.actionSuccess) {
-            haptics.reject()
+        if (r.actionSuccess) haptics.confirm() else haptics.reject()
+    }
+
+    // ------------------------------------------------------------------ drag to dismiss
+    val drag = remember { Animatable(0f) }
+    var heightPx by remember { mutableFloatStateOf(1f) }
+    var pastDismiss by remember { mutableStateOf(false) }
+    LaunchedEffect(visible) { if (visible) drag.snapTo(0f) }
+    val pulled = (drag.value / (heightPx * 0.5f)).coerceIn(0f, 1f)
+    val presence = appear * (1f - pulled)
+
+    val dragState = rememberDraggableState { delta ->
+        val next = drag.value + delta
+        val bounded = if (next >= 0f) next else -rubberBand(-next, heightPx)
+        scope.launch { drag.snapTo(bounded) }
+        val past = bounded > heightPx * 0.22f
+        if (past != pastDismiss) {
+            pastDismiss = past
+            haptics.threshold()
         }
     }
-    var pastDismissPoint by remember { mutableStateOf(false) }
 
-    val enter = if (reduceMotion) fadeIn(tween(160)) else
-        fadeIn(tween(180)) + slideInVertically(ChittiMotion.settle()) { it / 2 } + scaleIn(ChittiMotion.Settle, initialScale = 0.96f)
-    val exit = if (reduceMotion) fadeOut(tween(140)) else
-        fadeOut(tween(160)) + slideOutVertically(tween(180, easing = FastOutLinearInEasing)) { it }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { heightPx = it.height.toFloat().coerceAtLeast(1f) }
+            // Swallow touches so nothing underneath reacts while the overlay is up.
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+            .draggable(
+                orientation = Orientation.Vertical,
+                state = dragState,
+                onDragStopped = { velocity ->
+                    pastDismiss = false
+                    val projected = drag.value + projectMomentum(velocity)
+                    if (projected > heightPx * 0.22f && velocity > -300f) {
+                        onDismiss()
+                    } else {
+                        scope.launch { drag.animateTo(0f, Motion.momentum(), initialVelocity = velocity) }
+                    }
+                }
+            )
+    ) {
+        GlassSurface(
+            modifier = Modifier.fillMaxSize(),
+            depth = GlassDepth.Thick,
+            overlay = true,
+            progress = presence
+        )
 
-    AnimatedVisibility(visible = visible, enter = enter, exit = exit) {
-        val pulled = (dragOffset.value / sheetHeightPx).coerceIn(0f, 1f)
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Scrim.copy(alpha = 0.80f * (1f - pulled))),
-            contentAlignment = Alignment.BottomCenter
+                .offset { IntOffset(0, (drag.value.coerceAtLeast(0f) + (1f - appear) * 48.dp.toPx()).roundToInt()) }
+                .graphicsLayer { alpha = presence }
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = Space.xxl),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top scrim dismiss area
-            Box(
+            Spacer(Modifier.height(Space.xl))
+            AnimatedContent(
+                targetState = state,
+                transitionSpec = { fadeIn(Motion.fade(160)) togetherWith fadeOut(Motion.fade(120)) },
+                label = "voiceState"
+            ) { s ->
+                Text(
+                    when (s) {
+                        VoiceAssistantState.LISTENING -> "Listening"
+                        VoiceAssistantState.THINKING -> "Working on it"
+                        VoiceAssistantState.SPEAKING -> "Speaking"
+                        else -> "Chitti"
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = colors.glassTextMid
+                )
+            }
+
+            // Words: what you said, then what Chitti answered.
+            Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onDismiss
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Spacer(Modifier.height(Space.xxxl))
+                when {
+                    state == VoiceAssistantState.LISTENING && transcript.isBlank() -> {
+                        Text("Try saying", style = MaterialTheme.typography.bodyMedium, color = colors.glassTextMid)
+                        Spacer(Modifier.height(Space.s))
+                        RotatingText(
+                            items = VoiceExamples,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = colors.textHigh,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    transcript.isNotBlank() -> {
+                        Transcript(text = transcript, final = state != VoiceAssistantState.LISTENING)
+                    }
+                }
+                val response = assistantResponse
+                if (response != null && state != VoiceAssistantState.LISTENING && state != VoiceAssistantState.THINKING) {
+                    Spacer(Modifier.height(Space.xl))
+                    if (response.actionLabel != null) {
+                        StatusPill(
+                            text = response.actionLabel,
+                            tint = if (response.actionSuccess) colors.success else colors.warning,
+                            icon = if (response.actionSuccess) Icons.Rounded.CheckCircle else Icons.Rounded.Info
+                        )
+                        Spacer(Modifier.height(Space.m))
+                    }
+                    WordRevealText(
+                        text = response.message,
+                        animate = true,
+                        style = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
+                        color = colors.textHigh,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                     )
+                }
+                Spacer(Modifier.height(Space.xl))
+            }
+
+            VoiceForm(
+                state = state,
+                level = rmsLevel,
+                onClick = onMicClick,
+                modifier = Modifier.size(168.dp)
             )
 
-            val dragState = rememberDraggableState { delta ->
-                if (dismissing) return@rememberDraggableState
-                val next = dragOffset.value + delta
-                val bounded = if (next >= 0f) next else -rubberBand(-next, sheetHeightPx)
-                scope.launch { dragOffset.snapTo(bounded) }
-                val past = bounded > sheetHeightPx * 0.42f
-                if (past != pastDismissPoint) {
-                    pastDismissPoint = past
-                    haptics.threshold()
+            Spacer(Modifier.height(Space.l))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.m)) {
+                if (state == VoiceAssistantState.SPEAKING) {
+                    SecondaryButton(text = "Stop speaking", onClick = onStopSpeech)
                 }
+                SecondaryButton(
+                    text = if (state == VoiceAssistantState.LISTENING || state == VoiceAssistantState.THINKING) "Cancel" else "Done",
+                    onClick = onDismiss
+                )
             }
-
-            // Bottom sheet: consumes clicks so inner interactions do not bubble to onDismiss
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onSizeChanged { sheetHeightPx = it.height.toFloat().coerceAtLeast(1f) }
-                    .offset { IntOffset(0, dragOffset.value.roundToInt()) }
-                    .draggable(
-                        orientation = Orientation.Vertical,
-                        state = dragState,
-                        onDragStopped = { velocity ->
-                            pastDismissPoint = false
-                            if (dismissing) return@draggable
-                            // Momentum projection: where would the sheet come to rest?
-                            val projected = dragOffset.value + projectMomentum(velocity)
-                            if (projected > sheetHeightPx * 0.42f && velocity > -300f) {
-                                dismissing = true
-                                scope.launch {
-                                    dragOffset.animateTo(
-                                        sheetHeightPx,
-                                        ChittiMotion.Settle,
-                                        initialVelocity = velocity.coerceAtLeast(0f)
-                                    )
-                                    onDismiss()
-                                }
-                            } else {
-                                // Hand the release velocity to the spring: no seam between drag and settle.
-                                scope.launch { dragOffset.animateTo(0f, ChittiMotion.Sheet, initialVelocity = velocity) }
-                            }
-                        }
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { /* consume */ }
-                    )
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    .background(Surface1)
-                    .border(
-                        1.dp,
-                        Brush.verticalGradient(listOf(HairlineStrong, Hairline.copy(alpha = 0f))),
-                        RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-                    )
-            ) {
-                // A single accent wash at the top edge; stronger while the mic is open.
-                // While listening the wash brightens with the voice, so the sheet visibly hears you.
-                val washAlpha by animateFloatAsState(
-                    if (state == VoiceAssistantState.LISTENING) 0.35f + 0.45f * rmsLevel else 0.25f,
-                    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
-                    label = "sheetWash"
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp)
-                        .graphicsLayer { alpha = washAlpha }
-                        .background(AmbientGlow)
-                )
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                // Drag handle (the whole sheet is draggable; the handle is the affordance)
-                Box(
-                    modifier = Modifier
-                        .width(44.dp)
-                        .height(4.dp)
-                        .clip(CircleShape)
-                        .background(TextLow.copy(alpha = 0.5f + 0.4f * pulled))
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // State & Assistant Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        val dotColor by animateColorAsState(
-                            when (state) {
-                                VoiceAssistantState.LISTENING -> Accent
-                                VoiceAssistantState.THINKING -> Amber
-                                VoiceAssistantState.SPEAKING -> Mint
-                                else -> TextLow
-                            },
-                            label = "stateDot"
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(dotColor)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        AnimatedContent(
-                            targetState = state,
-                            transitionSpec = { (fadeIn(tween(150)) togetherWith fadeOut(tween(100))) },
-                            label = "stateLabel"
-                        ) { s ->
-                            Text(
-                                text = when (s) {
-                                    VoiceAssistantState.LISTENING -> "Listening"
-                                    VoiceAssistantState.THINKING -> "Working"
-                                    VoiceAssistantState.SPEAKING -> "Speaking"
-                                    VoiceAssistantState.RESULT -> "Result"
-                                    else -> "Chitti"
-                                },
-                                style = MaterialTheme.typography.labelMedium,
-                                color = TextMid
-                            )
-                        }
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (state == VoiceAssistantState.SPEAKING) {
-                            IconButton(onClick = onStopSpeech, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Filled.VolumeMute, contentDescription = "Stop speaking", tint = Rose, modifier = Modifier.size(19.dp))
-                            }
-                        }
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Filled.Close, contentDescription = "Close", tint = TextLow, modifier = Modifier.size(19.dp))
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Speech Transcript / Response Area
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 70.dp, max = 200.dp)
-                        .animateContentSize(ChittiMotion.settle()),
-                    contentAlignment = Alignment.Center
-                ) {
-                    when {
-                        state == VoiceAssistantState.LISTENING && transcript.isBlank() -> {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = "Try saying",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = TextLow
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                RotatingText(
-                                    items = VoiceExamples,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = TextMid,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                        state == VoiceAssistantState.LISTENING -> {
-                            Text(
-                                text = transcript,
-                                style = if (transcript.length > 35) MaterialTheme.typography.titleLarge
-                                    else MaterialTheme.typography.headlineMedium,
-                                color = TextHigh,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                        state == VoiceAssistantState.THINKING -> {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                LatticeLoader(
-                                    status = LatticeStatus.WORKING,
-                                    label = "Working on it",
-                                    pattern = LatticePatterns.Orbit,
-                                    color = Accent,
-                                    cellSize = 8.dp,
-                                    gap = 3.dp,
-                                    fontSize = 15
-                                )
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Text(
-                                    text = "\"$transcript\"",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = TextMid,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                        assistantResponse != null -> {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                if (assistantResponse.actionLabel != null) {
-                                    val ok = assistantResponse.actionSuccess
-                                    StatusPill(
-                                        text = assistantResponse.actionLabel,
-                                        tint = if (ok) Mint else Amber,
-                                        icon = if (ok) Icons.Filled.CheckCircle else Icons.Filled.Info,
-                                        modifier = Modifier.padding(bottom = 10.dp)
-                                    )
-                                }
-
-                                WordRevealText(
-                                    text = assistantResponse.message,
-                                    animate = true,
-                                    style = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
-                                    color = TextHigh,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Dynamic Animated Waveform & Glowing Mic Orb
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    AnimatedVisibility(
-                        visible = state == VoiceAssistantState.LISTENING,
-                        enter = fadeIn(tween(150)) + expandVertically(ChittiMotion.settle()),
-                        exit = fadeOut(tween(120)) + shrinkVertically(tween(160))
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            AudioWaveformVisualizer(rmsLevel = rmsLevel)
-                            Spacer(modifier = Modifier.height(14.dp))
-                        }
-                    }
-                    GeminiPulsingOrb(state = state, rmsLevel = rmsLevel, onClick = onMicClick)
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                }
-            }
+            Spacer(Modifier.height(Space.l))
         }
     }
 }
 
+/** The transcript: partial in secondary text with a soft caret, final in primary text. */
 @Composable
-fun AudioWaveformVisualizer(rmsLevel: Float) {
-    val barCount = 7
-    val infiniteTransition = rememberInfiniteTransition(label = "waveform")
-
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.height(56.dp)
-    ) {
-        for (i in 0 until barCount) {
-            val phaseOffset = (i * 100)
-            val animatedFactor by infiniteTransition.animateFloat(
-                initialValue = 0.25f,
-                targetValue = 1.0f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(durationMillis = 350 + (i * 50), delayMillis = phaseOffset, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "bar$i"
-            )
-
-            val rawHeight = (16.dp + (56 * rmsLevel * animatedFactor).dp).coerceIn(8.dp, 64.dp)
-            // Springs: the bars follow the mic level continuously and can reverse mid-motion.
-            val barHeight by animateDpAsState(
-                targetValue = rawHeight,
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow),
-                label = "barHeight$i"
-            )
-
-            // Centre bars read brightest, so the shape of the level is legible at a glance.
-            val emphasis = 1f - (kotlin.math.abs(i - (barCount - 1) / 2f) / barCount)
-            Box(
-                modifier = Modifier
-                    .width(6.dp)
-                    .height(barHeight)
-                    .clip(CircleShape)
-                    .background(Accent.copy(alpha = 0.45f + 0.55f * emphasis))
-            )
+private fun Transcript(text: String, final: Boolean) {
+    val colors = Chitti.colors
+    val reduce = rememberReducedMotion()
+    val caretAlpha = if (final || reduce) {
+        if (final) 0f else 0.6f
+    } else {
+        val t = rememberInfiniteTransition(label = "caret")
+        t.animateFloat(
+            initialValue = 0.15f,
+            targetValue = 0.8f,
+            animationSpec = infiniteRepeatable(Motion.fade(650), RepeatMode.Reverse),
+            label = "caretAlpha"
+        ).value
+    }
+    val annotated = buildAnnotatedString {
+        append(text)
+        if (!final) {
+            withStyle(SpanStyle(color = colors.accent.copy(alpha = caretAlpha))) { append(" |") }
         }
     }
+    Text(
+        annotated,
+        style = if (text.length > 40) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+        color = if (final) colors.textHigh else colors.glassTextMid,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .heightIn(min = 34.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite }
+    )
 }
 
 /**
- * The mic orb (after React Bits' Orb, redrawn for the design system: one hue, no shader noise).
- * Each state has its own motion, so the orb says what Chitti is doing without a label:
- *  - LISTENING: the halo swells with your actual voice level (continuous feedback, not a loop);
- *  - THINKING: an arc sweeps around the button;
- *  - SPEAKING: the halo breathes;
- *  - otherwise it rests.
+ * One continuous form that breathes with the voice. Its outline is a circle displaced by a few
+ * slow sine waves; the microphone level (smoothed by a spring, so it has weight) sets how far
+ * the outline swells and moves. Thinking turns the waves faster and quieter; with no level at all
+ * the form pulses slowly. Under reduced motion it is a still circle whose size follows the level.
+ * Tapping it listens again.
  */
 @Composable
-fun GeminiPulsingOrb(state: VoiceAssistantState, rmsLevel: Float = 0f, onClick: () -> Unit) {
-    val reduceMotion = rememberReducedMotion()
-    val infiniteTransition = rememberInfiniteTransition(label = "orb")
-
-    // Live voice level, smoothed by a critically damped spring so it follows without jitter.
-    val voice by animateFloatAsState(
-        targetValue = if (state == VoiceAssistantState.LISTENING && !reduceMotion) rmsLevel.coerceIn(0f, 1f) else 0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
-        label = "voice"
-    )
-    val breath by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "breath"
-    )
-    val sweep by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(1100, easing = LinearEasing)),
-        label = "sweep"
-    )
-
-    val haloScale = when {
-        reduceMotion -> 1f
-        state == VoiceAssistantState.LISTENING -> 1f + 0.55f * voice
-        state == VoiceAssistantState.SPEAKING -> 1.05f + 0.22f * breath
-        else -> 1f
-    }
-    val haloAlpha by animateFloatAsState(
-        when (state) {
-            VoiceAssistantState.LISTENING, VoiceAssistantState.SPEAKING -> 1f
-            VoiceAssistantState.THINKING -> 0.5f
-            else -> 0.35f
-        },
-        ChittiMotion.Settle,
-        label = "haloAlpha"
-    )
+private fun VoiceForm(
+    state: VoiceAssistantState,
+    level: Float,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = Chitti.colors
+    val reduce = rememberReducedMotion()
     val listening = state == VoiceAssistantState.LISTENING
-    val fill by animateColorAsState(if (listening) Accent else Surface2, ChittiMotion.settle(), label = "orbFill")
-    val glyph by animateColorAsState(if (listening) OnAccent else TextHigh, ChittiMotion.settle(), label = "orbGlyph")
+    val voice by animateFloatAsState(
+        targetValue = if (listening) level.coerceIn(0f, 1f) else 0f,
+        animationSpec = Motion.standard(),
+        label = "voiceLevel"
+    )
+    val scale by animateFloatAsState(
+        targetValue = when (state) {
+            VoiceAssistantState.LISTENING -> 1f
+            VoiceAssistantState.THINKING -> 0.82f
+            else -> 0.9f
+        },
+        animationSpec = Motion.gentle(),
+        label = "formScale"
+    )
+
+    // A clock for the waves, read only inside draw so it costs a redraw, not a recomposition.
+    val clock = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(reduce) {
+        if (reduce) return@LaunchedEffect
+        val start = withFrameNanos { it }
+        while (isActive) {
+            withFrameNanos { now -> clock.floatValue = (now - start) / 1_000_000_000f }
+        }
+    }
 
     val interaction = remember { MutableInteractionSource() }
-
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(96.dp)) {
-        // Halo
-        Box(
-            modifier = Modifier
-                .size(84.dp)
-                .graphicsLayer {
-                    scaleX = haloScale
-                    scaleY = haloScale
-                    alpha = haloAlpha
-                }
-                .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(Accent.copy(alpha = 0.34f), Accent.copy(alpha = 0.10f), Color.Transparent)
-                    )
-                )
+    Canvas(
+        modifier = modifier
+            .pressScale(interaction, 0.94f)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = if (listening) "Listening. Tap to start again" else "Tap to speak" }
+    ) {
+        val t = clock.floatValue
+        val speed = if (state == VoiceAssistantState.THINKING) 2.2f else 1f
+        // Slow idle pulse (~2.6s cycle) when there is no level to follow.
+        val idle = if (listening) 0f else 0.035f * (0.5f + 0.5f * sin(t * 2f * PI.toFloat() / 2.6f))
+        val amp = if (reduce) 0f else 0.05f + 0.20f * voice + idle
+        val base = size.minDimension / 2f * 0.72f * scale * (1f + if (reduce) 0.25f * voice else 0f)
+        val c = Offset(size.width / 2f, size.height / 2f)
+        val path = Path()
+        val steps = 96
+        for (i in 0..steps) {
+            val a = i / steps.toFloat() * 2f * PI.toFloat()
+            val wave = 0.5f * sin(3f * a + t * 1.3f * speed) +
+                0.3f * sin(5f * a - t * 1.7f * speed) +
+                0.2f * sin(2f * a + t * 0.9f * speed)
+            val r = base * (1f + amp * wave)
+            val x = c.x + r * cos(a)
+            val y = c.y + r * sin(a)
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        drawPath(
+            path = path,
+            brush = Brush.radialGradient(
+                colors = listOf(colors.accent, colors.accentFill),
+                center = Offset(c.x - base * 0.3f, c.y - base * 0.35f),
+                radius = base * 1.6f
+            )
         )
-
-        // Thinking: an arc chasing around the button.
-        AnimatedVisibility(
-            visible = state == VoiceAssistantState.THINKING,
-            enter = fadeIn(tween(200)),
-            exit = fadeOut(tween(160))
-        ) {
-            Canvas(modifier = Modifier.size(74.dp)) {
-                val stroke = 2.5.dp.toPx()
-                rotate(if (reduceMotion) 0f else sweep) {
-                    drawArc(
-                        brush = Brush.sweepGradient(listOf(Color.Transparent, AccentBright)),
-                        startAngle = 0f,
-                        sweepAngle = 300f,
-                        useCenter = false,
-                        style = Stroke(width = stroke, cap = StrokeCap.Round),
-                        topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2),
-                        size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
-                    )
-                }
-            }
-        }
-
-        // Main mic button: feedback on press-down, springs back on release.
-        Box(
-            modifier = Modifier
-                .size(62.dp)
-                .pressScale(interaction, pressed = 0.9f)
-                .clip(CircleShape)
-                .background(fill)
-                .border(1.dp, if (listening) EdgeHighlight else Hairline, CircleShape)
-                .clickable(interactionSource = interaction, indication = null, onClick = onClick),
-            contentAlignment = Alignment.Center
-        ) {
-            AnimatedContent(
-                targetState = state,
-                transitionSpec = {
-                    (fadeIn(tween(150)) + scaleIn(ChittiMotion.settle(), initialScale = 0.7f)) togetherWith
-                        (fadeOut(tween(100)) + scaleOut(ChittiMotion.settle(), targetScale = 0.7f))
-                },
-                label = "micIcon"
-            ) { s ->
-                Icon(
-                    imageVector = when (s) {
-                        VoiceAssistantState.SPEAKING -> Icons.Filled.GraphicEq
-                        VoiceAssistantState.THINKING -> Icons.Filled.AutoAwesome
-                        else -> Icons.Filled.Mic
-                    },
-                    contentDescription = when (s) {
-                        VoiceAssistantState.LISTENING -> "Listening"
-                        VoiceAssistantState.THINKING -> "Working"
-                        VoiceAssistantState.SPEAKING -> "Speaking"
-                        else -> "Talk to Chitti"
-                    },
-                    tint = glyph,
-                    modifier = Modifier.size(25.dp)
-                )
-            }
-        }
     }
 }

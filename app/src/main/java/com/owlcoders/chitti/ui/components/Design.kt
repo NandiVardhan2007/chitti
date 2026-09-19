@@ -1,75 +1,82 @@
 package com.owlcoders.chitti.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.util.VelocityTracker
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Cancel
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.owlcoders.chitti.ui.theme.*
+import com.owlcoders.chitti.ui.theme.Chitti
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /*
- * The component kit. Every screen is built from these so spacing, radii, borders, type and colour
- * stay identical across the app. Screens should not hand-roll a Card, a button, a chip or an empty
- * state: if something is missing here, add it here.
+ * The component kit. Screens are built from these and from InsetList / LargeTitleScaffold, so
+ * spacing, radii, type and colour stay identical everywhere. If a screen needs something that is
+ * not here, it is added here, not hand-rolled in the screen.
  */
 
-/** 4pt spacing scale. Use these instead of arbitrary dp values. */
+/** 4pt spacing scale. */
 object Space {
     val xs = 4.dp
     val s = 8.dp
@@ -78,203 +85,11 @@ object Space {
     val xl = 20.dp
     val xxl = 24.dp
     val xxxl = 32.dp
-    /** Gutter for every screen edge. */
+    /** Side margin of every screen. */
     val gutter = 20.dp
 }
 
-/** Full-bleed page background plus the standard side gutter. */
-@Composable
-fun ScreenScaffold(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Ink),
-        content = content
-    )
-}
-
-/**
- * Large screen title with optional subtitle and a trailing action slot.
- * One per screen, always at the top, always the same metrics.
- */
-@Composable
-fun ScreenHeader(
-    title: String,
-    subtitle: String? = null,
-    modifier: Modifier = Modifier,
-    revealTitle: Boolean = false,
-    trailing: @Composable RowScope.() -> Unit = {}
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = Space.gutter, end = Space.gutter, top = Space.xl, bottom = Space.l),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            // Large title: every screen answers "where am I" at a glance.
-            if (revealTitle) {
-                BlurText(text = title, style = MaterialTheme.typography.headlineLarge, color = TextHigh)
-            } else {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = TextHigh
-                )
-            }
-            if (subtitle != null) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMid
-                )
-            }
-        }
-        trailing()
-    }
-}
-
-/** Uppercase overline that opens a group of rows or cards. */
-@Composable
-fun SectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-        color = TextLow,
-        fontWeight = FontWeight.SemiBold,
-        modifier = modifier.padding(start = Space.gutter, end = Space.gutter, top = Space.l, bottom = Space.s)
-    )
-}
-
-/** Hairline separator used inside cards and between rows. */
-@Composable
-fun HairlineDivider(modifier: Modifier = Modifier, inset: androidx.compose.ui.unit.Dp = 0.dp) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = inset)
-            .height(1.dp)
-            .background(Hairline)
-    )
-}
-
-/**
- * The one card style: Surface1 on Ink, 1dp hairline, 16dp radius. Tappable cards get press
- * feedback and a soft spotlight that follows the finger.
- */
-@Composable
-fun ChittiSurfaceCard(
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
-    accent: Color = Accent,
-    contentPadding: PaddingValues = PaddingValues(Space.l),
-    content: @Composable ColumnScope.() -> Unit
-) {
-    val interaction = remember { MutableInteractionSource() }
-    var base = modifier
-        .clip(RoundedCornerShape(16.dp))
-        .background(Surface1)
-        .border(1.dp, Hairline, RoundedCornerShape(16.dp))
-    if (onClick != null) {
-        base = base
-            .pressScale(interaction, pressed = 0.985f)
-            .spotlight(accent.copy(alpha = 0.10f))
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-    }
-    Column(modifier = base.padding(contentPadding), content = content)
-}
-
-/** A metric: big number that counts up, label underneath, tinted icon well. */
-@Composable
-fun MetricTile(
-    label: String,
-    value: Int,
-    icon: ImageVector,
-    tint: Color,
-    modifier: Modifier = Modifier
-) {
-    ChittiSurfaceCard(modifier = modifier, accent = tint, contentPadding = PaddingValues(Space.l)) {
-        Box(
-            modifier = Modifier
-                .size(30.dp)
-                .clip(RoundedCornerShape(9.dp))
-                .background(tint.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(17.dp))
-        }
-        Spacer(Modifier.height(Space.m))
-        CountUpText(
-            target = value,
-            style = MaterialTheme.typography.headlineMedium,
-            color = TextHigh
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = TextMid,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-/** A standard list row: icon well, title, optional subtitle, trailing slot. */
-@Composable
-fun ListRow(
-    title: String,
-    modifier: Modifier = Modifier,
-    subtitle: String? = null,
-    icon: ImageVector? = null,
-    iconTint: Color = Accent,
-    onClick: (() -> Unit)? = null,
-    trailing: @Composable RowScope.() -> Unit = {}
-) {
-    val interaction = remember { MutableInteractionSource() }
-    var base = modifier.fillMaxWidth()
-    if (onClick != null) {
-        base = base
-            .clip(RoundedCornerShape(12.dp))
-            .pressScale(interaction, pressed = 0.99f)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-    }
-    Row(
-        modifier = base.padding(vertical = Space.m),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (icon != null) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(iconTint.copy(alpha = 0.13f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(17.dp))
-            }
-            Spacer(Modifier.width(Space.m))
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = TextHigh)
-            if (subtitle != null) {
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMid,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-        trailing()
-    }
-}
-
-/** Consistent empty state: quiet icon well, one line of title, one line of guidance. */
+/** Quiet empty state: glyph, one line of title, one line of guidance. No motion. */
 @Composable
 fun EmptyState(
     icon: ImageVector,
@@ -282,77 +97,71 @@ fun EmptyState(
     message: String,
     modifier: Modifier = Modifier
 ) {
+    val colors = Chitti.colors
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = Space.xxxl, vertical = Space.xxxl),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .staggeredEntrance(0)
-                .size(56.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(Surface2)
-                .border(1.dp, Hairline, RoundedCornerShape(18.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = TextLow, modifier = Modifier.size(24.dp))
-        }
-        Spacer(Modifier.height(Space.l))
-        Text(title, style = MaterialTheme.typography.titleMedium, color = TextHigh, modifier = Modifier.staggeredEntrance(1))
+        Icon(icon, contentDescription = null, tint = colors.textLow, modifier = Modifier.size(40.dp))
+        Spacer(Modifier.height(Space.m))
+        Text(title, style = MaterialTheme.typography.titleLarge, color = colors.textHigh, textAlign = TextAlign.Center)
         Spacer(Modifier.height(Space.xs))
-        Text(
-            message,
-            style = MaterialTheme.typography.bodySmall,
-            color = TextMid,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.staggeredEntrance(2)
-        )
+        Text(message, style = MaterialTheme.typography.bodyMedium, color = colors.textMid, textAlign = TextAlign.Center)
     }
 }
 
 // ---------------------------------------------------------------- Buttons
 
+/** Capsule button. Dims and shrinks on touch-down, so the press is felt before the release. */
 @Composable
-private fun BaseButton(
+private fun CapsuleButton(
     text: String,
     onClick: () -> Unit,
     container: Color,
     contentColor: Color,
-    border: Color?,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    icon: ImageVector? = null,
-    fill: Boolean = false
+    modifier: Modifier,
+    enabled: Boolean,
+    icon: ImageVector?,
+    fill: Boolean,
+    large: Boolean
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val alpha = if (enabled) 1f else 0.4f
+    val pressed by interaction.collectIsPressedAsState()
+    val alpha = when {
+        !enabled -> 0.4f
+        pressed -> 0.75f
+        else -> 1f
+    }
     Row(
         modifier = modifier
             .then(if (fill) Modifier.fillMaxWidth() else Modifier)
-            .height(44.dp)
+            .heightIn(min = if (large) 50.dp else 48.dp)
             .pressScale(interaction, pressed = 0.97f)
-            .clip(RoundedCornerShape(12.dp))
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(vertical = if (large) 0.dp else 6.dp)
+            .clip(CircleShape)
             .background(container.copy(alpha = container.alpha * alpha))
-            .then(if (border != null) Modifier.border(1.dp, border.copy(alpha = border.alpha * alpha), RoundedCornerShape(12.dp)) else Modifier)
-            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
-            .padding(horizontal = Space.l),
+            .padding(horizontal = if (large) Space.xl else Space.l)
+            .heightIn(min = if (large) 50.dp else 36.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
-            Icon(icon, contentDescription = null, tint = contentColor.copy(alpha = alpha), modifier = Modifier.size(17.dp))
+            Icon(icon, contentDescription = null, tint = contentColor.copy(alpha = alpha), modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(Space.s))
         }
         Text(
             text,
-            style = MaterialTheme.typography.labelLarge,
-            color = contentColor.copy(alpha = alpha)
+            style = if (large) MaterialTheme.typography.titleLarge else MaterialTheme.typography.labelLarge,
+            color = contentColor.copy(alpha = alpha),
+            maxLines = 1
         )
     }
 }
 
+/** The one filled accent action on a screen. */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -361,8 +170,9 @@ fun PrimaryButton(
     enabled: Boolean = true,
     icon: ImageVector? = null,
     fill: Boolean = true
-) = BaseButton(text, onClick, Accent, OnAccent, null, modifier, enabled, icon, fill)
+) = CapsuleButton(text, onClick, Chitti.colors.accentFill, Chitti.colors.onAccent, modifier, enabled, icon, fill, large = fill)
 
+/** Tinted, not filled: accent label on a quiet fill. */
 @Composable
 fun SecondaryButton(
     text: String,
@@ -371,7 +181,7 @@ fun SecondaryButton(
     enabled: Boolean = true,
     icon: ImageVector? = null,
     fill: Boolean = false
-) = BaseButton(text, onClick, Surface2, TextHigh, Hairline, modifier, enabled, icon, fill)
+) = CapsuleButton(text, onClick, Chitti.colors.fill, Chitti.colors.accent, modifier, enabled, icon, fill, large = fill)
 
 @Composable
 fun DangerButton(
@@ -381,9 +191,89 @@ fun DangerButton(
     enabled: Boolean = true,
     icon: ImageVector? = null,
     fill: Boolean = false
-) = BaseButton(text, onClick, Rose.copy(alpha = 0.14f), Rose, Rose.copy(alpha = 0.35f), modifier, enabled, icon, fill)
+) = CapsuleButton(text, onClick, Chitti.colors.danger.copy(alpha = 0.14f), Chitti.colors.danger, modifier, enabled, icon, fill, large = fill)
 
-/** Small status badge: tinted wash, tinted label. */
+/** Plain accent text, for "See all", "Save", "Allow". Keeps a 48dp touch target. */
+@Composable
+fun LinkButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    color: Color = Chitti.colors.accent,
+    style: TextStyle = MaterialTheme.typography.bodyLarge
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Box(
+        modifier = modifier
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(horizontal = Space.xs),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text,
+            style = style,
+            color = if (!enabled) Chitti.colors.textLow else color.copy(alpha = if (pressed) 0.5f else 1f),
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * A glyph button for a bar. 48dp target around a 24dp glyph; the glyph dims on press. Always
+ * labelled: an icon that is the whole control needs words for TalkBack.
+ */
+@Composable
+fun BarIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = Chitti.colors.accent
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint.copy(alpha = if (pressed) 0.5f else 1f), modifier = Modifier.size(24.dp))
+    }
+}
+
+/** The user's initial in a circle; stands in for a photo, which Chitti does not have. */
+@Composable
+fun Avatar(
+    initial: String?,
+    size: Dp = 32.dp,
+    fallback: ImageVector? = null
+) {
+    val colors = Chitti.colors
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(colors.accentWash),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!initial.isNullOrBlank()) {
+            Text(
+                initial.take(1).uppercase(),
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize * (size.value / 32f)),
+                color = colors.accent
+            )
+        } else if (fallback != null) {
+            Icon(fallback, contentDescription = null, tint = colors.accent, modifier = Modifier.size(size * 0.56f))
+        }
+    }
+}
+
+/** Small status badge: tinted wash, tinted label, capsule. */
 @Composable
 fun StatusPill(
     text: String,
@@ -393,29 +283,65 @@ fun StatusPill(
 ) {
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(7.dp))
-            .background(tint.copy(alpha = 0.13f))
+            .clip(CircleShape)
+            .background(tint.copy(alpha = if (Chitti.colors.isDark) 0.2f else 0.12f))
             .padding(horizontal = Space.s, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(11.dp))
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(12.dp))
             Spacer(Modifier.width(4.dp))
         }
-        Text(text, style = MaterialTheme.typography.labelSmall, color = tint, fontWeight = FontWeight.SemiBold)
+        Text(text, style = MaterialTheme.typography.labelMedium, color = tint, fontWeight = FontWeight.SemiBold)
     }
 }
 
-/** A 6dp dot, for urgency and status marks. */
+/** A dot, for urgency and status marks next to text. */
 @Composable
-fun Dot(color: Color, size: androidx.compose.ui.unit.Dp = 6.dp, modifier: Modifier = Modifier) {
+fun Dot(color: Color, size: Dp = 8.dp, modifier: Modifier = Modifier) {
     Box(modifier = modifier.size(size).clip(CircleShape).background(color))
+}
+
+/**
+ * Suggestion capsule for the content layer (opaque; glass is for controls that float). Used for
+ * "do this now" affordances so they all look and respond the same way.
+ */
+@Composable
+fun ChipButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    tint: Color = Chitti.colors.accent
+) {
+    val colors = Chitti.colors
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val bg by animateColorAsState(if (pressed) colors.fill else colors.surface, Motion.snappy(), label = "chip")
+    Row(
+        modifier = modifier
+            .heightIn(min = 48.dp)
+            .pressScale(interaction, pressed = 0.96f)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+            .padding(vertical = 4.dp)
+            .clip(CircleShape)
+            .background(bg)
+            .padding(horizontal = Space.l, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(Space.s))
+        }
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = colors.textHigh, maxLines = 1)
+    }
 }
 
 /**
  * Segmented control. Tap a segment, or grab the thumb and drag it: it tracks the finger 1:1,
  * rubber-bands past either end, ticks as it crosses each segment, and on release lands on the
  * segment its momentum is heading for, carrying the finger's velocity into the settle.
+ * Capsule track; the thumb's radius is concentric with it.
  */
 @Composable
 fun SegmentedTabs(
@@ -424,6 +350,10 @@ fun SegmentedTabs(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = Chitti.colors
+    val trackHeight = 36.dp
+    val thumbInset = 3.dp
+    val thumbShape = RoundedCornerShape(concentricRadius(trackHeight / 2, thumbInset))
     var widthPx by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
     val count = options.size.coerceAtLeast(1)
@@ -443,21 +373,19 @@ fun SegmentedTabs(
             thumbX.snapTo(target)
             measured = true
         } else {
-            thumbX.animateTo(target, ChittiMotion.Settle)
+            thumbX.animateTo(target, Motion.standard())
         }
     }
 
-    // While dragging, the labels follow the segment under the thumb, not the committed one.
     val hovered = if (segmentPx > 0f) ((thumbX.value + segmentPx / 2f) / segmentPx).toInt().coerceIn(0, count - 1) else selectedIndex
     val activeIndex = if (dragging) hovered else selectedIndex
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(36.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Surface2)
-            .border(1.dp, Hairline, RoundedCornerShape(10.dp))
+            .height(trackHeight)
+            .clip(CircleShape)
+            .background(colors.fill)
             .onSizeChanged { widthPx = it.width }
             .pointerInput(count) {
                 val tracker = VelocityTracker()
@@ -466,7 +394,6 @@ fun SegmentedTabs(
                 fun seg() = size.width.toFloat() / count
                 detectHorizontalDragGestures(
                     onDragStart = { down ->
-                        // Only the thumb is draggable, as on iOS; a drag that starts elsewhere is ignored.
                         dragging = down.x >= thumbX.value && down.x <= thumbX.value + seg()
                         if (dragging) {
                             tracker.resetTracking()
@@ -497,10 +424,9 @@ fun SegmentedTabs(
                     onDragEnd = {
                         if (dragging) {
                             val v = tracker.calculateVelocity().x
-                            // A segmented control is short, so use the snappier deceleration rate.
                             val projected = thumbX.value + projectMomentum(v, decelerationRate = 0.99f)
                             val target = ((projected + seg() / 2f) / seg()).toInt().coerceIn(0, count - 1)
-                            scope.launch { thumbX.animateTo(seg() * target, ChittiMotion.Settle, initialVelocity = v) }
+                            scope.launch { thumbX.animateTo(seg() * target, Motion.momentum(), initialVelocity = v) }
                             dragging = false
                             if (target != selectedNow) select(target)
                         }
@@ -508,7 +434,7 @@ fun SegmentedTabs(
                     onDragCancel = {
                         if (dragging) {
                             dragging = false
-                            scope.launch { thumbX.animateTo(seg() * selectedNow, ChittiMotion.Settle) }
+                            scope.launch { thumbX.animateTo(seg() * selectedNow, Motion.standard()) }
                         }
                     }
                 )
@@ -519,21 +445,24 @@ fun SegmentedTabs(
                 modifier = Modifier
                     .offset { IntOffset(thumbX.value.roundToInt(), 0) }
                     .width(with(density) { segmentPx.toDp() })
-                    .fillMaxSize()
-                    .padding(3.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Surface3)
-                    .border(1.dp, EdgeHighlight, RoundedCornerShape(8.dp))
+                    .fillMaxHeight()
+                    .padding(thumbInset)
+                    .shadow(if (colors.isDark) 0.dp else 2.dp, thumbShape, ambientColor = colors.shadow, spotColor = colors.shadow)
+                    .clip(thumbShape)
+                    .background(if (colors.isDark) colors.surfaceRaised.copy(alpha = 1f) else colors.surface)
             )
         }
         Row(modifier = Modifier.fillMaxSize()) {
             options.forEachIndexed { index, option ->
                 val selected = index == activeIndex
-                val color by animateColorAsState(if (selected) TextHigh else TextMid, label = "segmentLabel")
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
+                        .semantics {
+                            role = Role.Tab
+                            this.selected = selected
+                        }
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -547,8 +476,8 @@ fun SegmentedTabs(
                 ) {
                     Text(
                         option,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = color,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = colors.textHigh,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                         maxLines = 1
                     )
@@ -558,128 +487,113 @@ fun SegmentedTabs(
     }
 }
 
-/** Labelled proportion bar, for category / status breakdowns. */
-@Composable
-fun MeterRow(
-    label: String,
-    value: Int,
-    total: Int,
-    tint: Color,
-    modifier: Modifier = Modifier
-) {
-    val fraction = if (total <= 0) 0f else (value.toFloat() / total).coerceIn(0f, 1f)
-    // Fill from empty on first display, so the proportion is read as it arrives.
-    var armed by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { armed = true }
-    val animated by animateFloatAsState(
-        if (armed) fraction else 0f,
-        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
-        label = "meter"
-    )
-    Column(modifier = modifier.padding(vertical = Space.s)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Dot(tint)
-            Spacer(Modifier.width(Space.s))
-            Text(label, style = MaterialTheme.typography.bodySmall, color = TextMid, modifier = Modifier.weight(1f))
-            Text("$value", style = MaterialTheme.typography.labelLarge, color = TextHigh)
-        }
-        Spacer(Modifier.height(Space.s))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(4.dp)
-                .clip(CircleShape)
-                .background(Surface3)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(animated)
-                    .height(4.dp)
-                    .clip(CircleShape)
-                    .background(tint)
-            )
-        }
-    }
-}
-
 /**
- * Compact tappable chip: tinted glyph, label, raised surface. Quick actions and suggestions use
- * this so every "do this now" affordance looks and responds the same way.
+ * The single text-field style: a filled rounded field with no outline, like iOS. [label] sits above
+ * it as a caption when the field is not inside a labelled row.
  */
-@Composable
-fun ChipButton(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    tint: Color = Accent
-) {
-    val interaction = remember { MutableInteractionSource() }
-    Row(
-        modifier = modifier
-            .height(36.dp)
-            .pressScale(interaction, pressed = 0.95f)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Surface2)
-            .border(1.dp, Hairline, RoundedCornerShape(10.dp))
-            .spotlight(tint.copy(alpha = 0.14f))
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(horizontal = Space.m),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (icon != null) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
-            Spacer(Modifier.width(Space.s))
-        }
-        Text(label, style = MaterialTheme.typography.labelMedium, color = TextHigh, maxLines = 1)
-    }
-}
-
-/** The single text-field style. */
 @Composable
 fun ChittiTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
+    label: String? = null,
     leadingIcon: ImageVector? = null,
     singleLine: Boolean = true,
-    supportingText: String? = null,
-    label: String? = null
+    keyboardType: KeyboardType = KeyboardType.Text,
+    imeAction: ImeAction = ImeAction.Done,
+    onImeAction: () -> Unit = {},
+    containerColor: Color = Chitti.colors.surfaceRaised
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
-        placeholder = { Text(placeholder, style = MaterialTheme.typography.bodyMedium, color = TextLow) },
-        label = if (label != null) {
-            { Text(label, style = MaterialTheme.typography.bodySmall) }
-        } else null,
-        supportingText = if (supportingText != null) {
-            { Text(supportingText, style = MaterialTheme.typography.labelSmall, color = TextLow) }
-        } else null,
-        leadingIcon = if (leadingIcon != null) {
-            { Icon(leadingIcon, contentDescription = null, tint = TextLow, modifier = Modifier.size(18.dp)) }
-        } else null,
-        singleLine = singleLine,
-        shape = RoundedCornerShape(12.dp),
-        textStyle = MaterialTheme.typography.bodyMedium,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = Surface2,
-            unfocusedContainerColor = Surface2,
-            focusedBorderColor = Accent,
-            unfocusedBorderColor = Hairline,
-            focusedTextColor = TextHigh,
-            unfocusedTextColor = TextHigh,
-            cursorColor = Accent,
-            focusedLabelColor = Accent,
-            unfocusedLabelColor = TextMid
+    val colors = Chitti.colors
+    Column(modifier = modifier.fillMaxWidth()) {
+        if (label != null) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.textMid,
+                modifier = Modifier.padding(start = Space.xs, bottom = Space.xs)
+            )
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = singleLine,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.textHigh),
+            cursorBrush = SolidColor(colors.accent),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+            keyboardActions = KeyboardActions(onAny = { onImeAction() }),
+            modifier = Modifier.fillMaxWidth(),
+            decorationBox = { inner ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(containerColor)
+                        .padding(horizontal = Space.m, vertical = Space.m),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (leadingIcon != null) {
+                        Icon(leadingIcon, contentDescription = null, tint = colors.textMid, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(Space.s))
+                    }
+                    Box(Modifier.weight(1f)) {
+                        if (value.isEmpty()) {
+                            Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = colors.textLow)
+                        }
+                        inner()
+                    }
+                }
+            }
         )
-    )
+    }
 }
 
-/** Wraps content so uncoloured Text/Icon inherit the right ink on dark surfaces. */
+/** Search field with a clear button that appears once there is something to clear. */
 @Composable
-fun OnDarkContent(content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalContentColor provides TextHigh, content = content)
+fun SearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier
+) {
+    val colors = Chitti.colors
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.textHigh),
+        cursorBrush = SolidColor(colors.accent),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        modifier = modifier.fillMaxWidth(),
+        decorationBox = { inner ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .background(colors.fill)
+                    .padding(start = Space.s),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Rounded.Search, contentDescription = null, tint = colors.textMid, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(6.dp))
+                Box(Modifier.weight(1f)) {
+                    if (value.isEmpty()) {
+                        Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = colors.textMid)
+                    }
+                    inner()
+                }
+                if (value.isNotEmpty()) {
+                    BarIconButton(
+                        icon = Icons.Rounded.Cancel,
+                        contentDescription = "Clear search",
+                        onClick = { onValueChange("") },
+                        tint = colors.textLow
+                    )
+                }
+            }
+        }
+    )
 }
