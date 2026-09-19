@@ -55,8 +55,8 @@ The deck must be honest; judges will see the live app.
 - Real reminders (alarms that survive a reboot)
 - A voice assistant (speak or type): "What's pending?", "Remind me to call mom in 30 minutes", "Open WhatsApp", flashlight
 - Memory: facts about you (college, branch, people) used when you ask about yourself
-- **LinkGuard:** flags scam links inside incoming messages (fake KYC/UPI, bank lookalikes), entirely on the phone
-- Works offline; nothing is sent to any server
+- **LinkGuard:** every link tapped in any app opens in Chitti first. It is checked on the phone (lookalike brands, fake KYC/UPI, scam domain endings) and with Google Safe Browsing when online. Safe links open in the user's browser; unsafe ones are stopped with the reasons explained.
+- Messages never leave the phone. The only thing ever sent is a link being checked, and only to Google Safe Browsing. Offline, everything including the phone-side link check still works.
 - An **Extraction lab** screen that shows exactly what the AI pulled out of a message
 
 **Planned, not built yet (label as "AT THE EVENT", never as done):**

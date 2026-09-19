@@ -106,7 +106,7 @@ Only messages that pass the quick filter reach the LLM, which keeps battery use 
 - **Action registry:** 17 whitelisted actions, with confirmation required for risky ones such as sending an SMS. Every action is logged in "What Chitti did".
 
 ### Safety and convenience (beyond the brief)
-- **LinkGuard:** scores links inside incoming messages on the device (fake KYC/UPI, bank lookalikes, lottery bait, shorteners), raises an alert for dangerous ones, and can act as the link handler with an explained warning screen
+- **LinkGuard:** once Chitti is set as the link opener (Settings → Links, or onboarding), **every link tapped in any app opens in Chitti first**. It is checked on the phone (lookalike brands such as `phonepe.secure-verify.xyz`, fake KYC/UPI, bank typosquats, scam domain endings, shorteners) and, when online, with **Google Safe Browsing**. Safe links show how they were checked, then open in the user's chosen browser; unsafe links explain every reason, with *Go back* as the main action. Links inside incoming notifications get the same check and raise an alert if dangerous.
 - **Autofill:** fills your saved profile into forms in other apps
 - **Accessibility typing:** types text into another app on command
 
@@ -142,7 +142,7 @@ Only messages that pass the quick filter reach the LLM, which keeps battery use 
 2. **LinkGuard sits close to the Chennai winner** (unsafe payment QR). Keep it a supporting feature so the idea stays clearly original.
 3. **The key demo moment isn't built** (see §6). Build it before practising the demo.
 4. **Is pre-built code allowed?** The brief plans a 30-hour build at the event, but most of the app already exists. Check the rules, and be ready to explain what's new at the event (for example the pop-up card, the digest and Office Kit integration).
-5. **The "no network" claim:** the manifest still declares `INTERNET` (commented "Optional, for Cartesia"), but no code uses the network. Removing that permission makes "works with no internet" provable, not just claimed. The airplane-mode demo step proves it too.
+5. **The "nothing leaves the phone" claim:** with Google Safe Browsing on, the one thing sent off the phone is a **link being checked**, and only to Google. Messages, extraction, memory and voice stay on the device. Say it exactly that way ("your messages never leave the phone; only a link is sent to Google to check it"). Offline, the phone check still works on its own.
 6. **Model quality:** the local Gemma 2B build is sometimes wrong on general questions. Keep the demo on extraction, which is its strength, and have the rule fallback ready.
 7. **Numbers:** `brain/references.md` lists latency figures that were never measured. Measure them in the Extraction lab on the actual demo phone before putting any on a slide.
 
@@ -199,7 +199,7 @@ Only messages that pass the quick filter reach the LLM, which keeps battery use 
 - [ ] Team lead submits the Phase 1 form by **20 September** (deadline 22 September)
 - [ ] Build the **"Deadline detected" pop-up** with Add to calendar / Remind me buttons
 - [ ] Build the **evening digest**
-- [ ] Remove the unused `INTERNET` permission
+- [x] Link checking for every tapped link, on the phone plus Google Safe Browsing (key kept in git-ignored `local.properties`)
 - [ ] Check the rules on pre-built code
 - [ ] Learn Office Kit and practise with it before 26 September
 - [ ] Measure real latencies in the Extraction lab on the demo phone
