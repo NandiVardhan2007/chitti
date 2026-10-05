@@ -96,5 +96,5 @@ adb push gemma-1.1-2b-it-cpu-int4.bin /data/local/tmp/gemma.bin
 ---
 
 <div align="center">
-  <b>Built with ❤️ by Team HighQ (Nandi Vardhan)</b>
+  <b>Built with ❤️ by Team HighQ</b>
 </div>
