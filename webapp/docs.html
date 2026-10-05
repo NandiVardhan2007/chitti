@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Docs — Chitti</title>
+  <meta name="description" content="How Chitti works: Today, Ask, Voice and Library, the permissions it asks for and why, and how to build it yourself.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="index.html" aria-label="Chitti home">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="fh" cx="0.36" cy="0.3" r="0.82"><stop offset="0" stop-color="#FFD86B"/><stop offset="0.55" stop-color="#F0B31C"/><stop offset="1" stop-color="#B9860A"/></radialGradient><linearGradient id="bh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C1C1F"/><stop offset="1" stop-color="#050508"/></linearGradient></defs><rect width="100" height="100" rx="23" fill="url(#bh)"/><circle cx="50" cy="50" r="31" fill="url(#fh)"/><g transform="translate(50 50) skewX(-8) translate(-50 -50)"><rect x="38.5" y="38" width="7.5" height="17" rx="3.75" fill="#050508"/><rect x="54" y="38" width="7.5" height="17" rx="3.75" fill="#050508"/></g><path d="M27.4 41.8 A24 24 0 0 1 41.8 27.4" stroke="#FFFFFF" stroke-opacity="0.4" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        <span>Chitti</span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a class="nav-link" href="index.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.6V20h14V9.6"/></svg>
+          <span class="nav-labels">Home</span>
+        </a>
+        <a class="nav-link" href="docs.html" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M9.5 12h6M9.5 16h6"/></svg>
+          <span class="nav-labels">Docs</span>
+        </a>
+        <a class="nav-link" href="privacy.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.8-3.3 7.9-7 9-3.7-1.1-7-4.2-7-9V6z"/></svg>
+          <span class="nav-labels">Privacy</span>
+        </a>
+        <a class="nav-link" href="cookies.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="10" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="15" r="1" fill="currentColor" stroke="none"/></svg>
+          <span class="nav-labels">Cookies</span>
+        </a>
+        <a class="btn btn-primary nav-cta" href="https://github.com/NandiVardhan2007/chitti/releases/latest" target="_blank" rel="noopener">Get the APK</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="wrap">
+      <div class="section-head">
+        <h1 class="large-title">Docs</h1>
+        <p>What each part of Chitti does, the permissions it asks for and why, and how to build it yourself. Everything here runs on the phone unless the Privacy page says otherwise.</p>
+      </div>
+
+      <h2 class="title-2" style="margin-bottom:var(--l)">What each part does</h2>
+      <div class="rows">
+        <div class="row">
+          <span class="dot dot-accent"></span>
+          <div>
+            <div class="row-title headline">Today</div>
+            <p class="row-body subheadline">Commitments pulled out of your notifications, urgent ones first, with one-tap reply, calendar and reminder actions, and a log of what Chitti did for you.</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="dot dot-purple"></span>
+          <div>
+            <div class="row-title headline">Ask</div>
+            <p class="row-body subheadline">Type or talk. Answers questions about you from facts you've saved ("what is my branch?"), sets reminders ("remind me to call mom in 30 minutes"), reports what's pending, controls the flashlight, opens apps, and answers general questions with the on-device model.</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="dot dot-info"></span>
+          <div>
+            <div class="row-title headline">Voice</div>
+            <p class="row-body subheadline">Tap the mic and speak; Chitti shows the transcript live and answers aloud.</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="dot dot-success"></span>
+          <div>
+            <div class="row-title headline">Library &amp; Settings</div>
+            <p class="row-body subheadline">Library holds everything Chitti found in notifications plus the facts you've taught it. From Settings you can clear any kind of stored data (or all of it) and require your fingerprint to unlock the app.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="section-head">
+        <h2 class="title-2">Permissions, and why</h2>
+        <p>Chitti asks only for what a given feature needs. Plain-language reasons below; the exact manifest lives in the repo.</p>
+      </div>
+      <div class="table-card">
+        <table class="data">
+          <thead><tr><th>Permission</th><th>Why Chitti asks for it</th></tr></thead>
+          <tbody>
+            <tr><td>Record audio</td><td>Powers Voice and the mic button in Ask.</td></tr>
+            <tr><td>Post notifications</td><td>Lets the app notify you.</td></tr>
+            <tr><td>Notification listener</td><td>Reads incoming notifications to build the Today list — the core mechanism the app runs on.</td></tr>
+            <tr><td>Accessibility service</td><td>Performs the small set of whitelisted actions (opening an app, toggling the flashlight).</td></tr>
+            <tr><td>Read / write calendar</td><td>Turns a detected commitment into a calendar event with one tap.</td></tr>
+            <tr><td>Alarms</td><td>So a reminder fires at the exact time you asked for.</td></tr>
+            <tr><td>Send SMS</td><td>Only used if you ask Chitti to send a text as an automation action.</td></tr>
+            <tr><td>Foreground service</td><td>Keeps notification capture and voice alive reliably.</td></tr>
+            <tr><td>Receive boot completed</td><td>Restarts background listening after the phone reboots.</td></tr>
+            <tr><td>Ignore battery optimizations</td><td>Keeps the background service from being killed by the OS.</td></tr>
+            <tr><td>Internet</td><td>Only for the three network cases described on the Privacy page (sign-in, optional backup, Safe Browsing).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="section-head">
+        <h2 class="title-2">Building it yourself</h2>
+      </div>
+      <div class="card">
+        <p class="subheadline text-mid">You'll need JDK 17 or newer, the Android SDK (compile SDK 37), and a phone on Android 8.0 (API 26) or later — plus Android Gradle Plugin 9.4, Kotlin 2.4 and Jetpack Compose. Clone the repo, create a <span class="mono">local.properties</span> with your SDK path and Firebase config (Firebase keys are optional in debug — a "skip" sign-in option appears without them), optionally push the Gemma model to the device, then run <span class="mono">./gradlew :app:installDebug</span>. The Gemma model (<span class="mono">gemma-1.1-2b-it-cpu-int4.bin</span>, available from Kaggle) is optional; without it, Chitti falls back to a rule-based extraction engine.</p>
+        <div class="hero-actions" style="justify-content:flex-start;margin-top:var(--l)">
+          <a class="btn btn-secondary" href="https://github.com/NandiVardhan2007/chitti" target="_blank" rel="noopener">Repo README</a>
+          <a class="btn btn-secondary" href="https://github.com/NandiVardhan2007/chitti/blob/main/backend/README.md" target="_blank" rel="noopener">Backend README</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- SHARED_FOOTER -->
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span class="footnote">© 2026 Owl Coders</span>
+      <span class="sep">·</span>
+      <a href="https://github.com/NandiVardhan2007/chitti" target="_blank" rel="noopener">GitHub</a>
+      <span class="sep">·</span>
+      <a href="mailto:chittibot7@gmail.com">chittibot7@gmail.com</a>
+      <span class="footer-spacer"></span>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="cookies.html">Cookies</a>
+    </div>
+  </footer>
+
+  <div class="cookie-banner" id="cookie-banner" role="region" aria-label="Cookie notice">
+    <p class="subheadline">This site sets no tracking cookies and loads no analytics. It stores a single local flag so this notice stays dismissed. <a href="cookies.html">Details</a>.</p>
+    <div class="cookie-actions">
+      <button class="btn btn-primary" id="cookie-accept" type="button">Got it</button>
+      <button class="btn btn-secondary" id="cookie-dismiss" type="button">Dismiss</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

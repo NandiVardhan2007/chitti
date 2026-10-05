@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy — Chitti</title>
+  <meta name="description" content="Chitti keeps your data on your phone. Exactly what stays on-device, the only three cases that touch the network, and precisely what the backend can and cannot see.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="index.html" aria-label="Chitti home">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="fh" cx="0.36" cy="0.3" r="0.82"><stop offset="0" stop-color="#FFD86B"/><stop offset="0.55" stop-color="#F0B31C"/><stop offset="1" stop-color="#B9860A"/></radialGradient><linearGradient id="bh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C1C1F"/><stop offset="1" stop-color="#050508"/></linearGradient></defs><rect width="100" height="100" rx="23" fill="url(#bh)"/><circle cx="50" cy="50" r="31" fill="url(#fh)"/><g transform="translate(50 50) skewX(-8) translate(-50 -50)"><rect x="38.5" y="38" width="7.5" height="17" rx="3.75" fill="#050508"/><rect x="54" y="38" width="7.5" height="17" rx="3.75" fill="#050508"/></g><path d="M27.4 41.8 A24 24 0 0 1 41.8 27.4" stroke="#FFFFFF" stroke-opacity="0.4" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        <span>Chitti</span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a class="nav-link" href="index.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.6V20h14V9.6"/></svg>
+          <span class="nav-labels">Home</span>
+        </a>
+        <a class="nav-link" href="docs.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M9.5 12h6M9.5 16h6"/></svg>
+          <span class="nav-labels">Docs</span>
+        </a>
+        <a class="nav-link" href="privacy.html" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.8-3.3 7.9-7 9-3.7-1.1-7-4.2-7-9V6z"/></svg>
+          <span class="nav-labels">Privacy</span>
+        </a>
+        <a class="nav-link" href="cookies.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="10" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="15" r="1" fill="currentColor" stroke="none"/></svg>
+          <span class="nav-labels">Cookies</span>
+        </a>
+        <a class="btn btn-primary nav-cta" href="https://github.com/NandiVardhan2007/chitti/releases/latest" target="_blank" rel="noopener">Get the APK</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="wrap">
+      <div class="section-head">
+        <h1 class="large-title">Privacy</h1>
+        <p>Chitti's whole design is built around keeping your data on the phone. Here's exactly what that means — what never leaves the device, the only three cases that touch the network, and precisely what the backend can see.</p>
+      </div>
+
+      <h2 class="title-2" style="margin-bottom:var(--l)">Stays on the phone</h2>
+      <div class="rows">
+        <div class="row">
+          <span class="dot dot-success"></span>
+          <div>
+            <div class="row-title headline">On-device intelligence</div>
+            <p class="row-body subheadline">The language model, speech recognition, and notification processing all run on the phone.</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="dot dot-success"></span>
+          <div>
+            <div class="row-title headline">Your documents</div>
+            <p class="row-body subheadline">ID document scanning and parsing happen on-device; the vault is kept behind your fingerprint lock.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="section-head">
+        <h2 class="title-2">Touches the network — only these three cases</h2>
+      </div>
+      <div class="rows">
+        <div class="row">
+          <span class="dot dot-info"></span>
+          <div>
+            <div class="row-title headline">1. Sign-in</div>
+            <p class="row-body subheadline">Handled via Firebase Authentication.</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="dot dot-info"></span>
+          <div>
+            <div class="row-title headline">2. Optional encrypted backup</div>
+            <p class="row-body subheadline">The phone derives a key from a password you choose (PBKDF2-HMAC-SHA256 → AES-256) and encrypts the backup <em>before</em> it leaves the device. The server stores ciphertext only, in MongoDB GridFS, plus the public KDF parameters (salt, iteration count) needed to re-derive the key. Each account keeps only its latest backup.</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="dot dot-info"></span>
+          <div>
+            <div class="row-title headline">3. Safe Browsing link checks</div>
+            <p class="row-body subheadline">Only the link itself is sent, to Google Safe Browsing.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="section-head">
+        <h2 class="title-2">What the backend can actually see</h2>
+      </div>
+      <div class="table-card">
+        <table class="data">
+          <thead><tr><th>Category</th><th>What is stored</th></tr></thead>
+          <tbody>
+            <tr><td>Per account</td><td>Firebase uid, email address, whether it's verified, display name, sign-in provider, account creation time, and last login time.</td></tr>
+            <tr><td>Per backup <span class="text-low">(only if you make one)</span></td><td>Its size, the SHA-256 of the ciphertext, upload time, KDF parameters (algorithm, iteration count, salt), and the device name you supplied.</td></tr>
+            <tr><td>Access boundary</td><td>Every route acts only on the caller's own token's uid — one account can never reach another account's data.</td></tr>
+            <tr><td>Request logs</td><td>Only request id, method, URL, status, and timing — never headers or tokens, bodies, or backup contents.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout callout-danger" style="margin-top:var(--l)">
+        <span class="dot"></span>
+        <div>
+          <h3 class="headline">If you forget your backup password, the backup can't be recovered.</h3>
+          <p class="text-mid subheadline" style="margin-top:4px">That's the stated cost of end-to-end encryption — not even the server operator can decrypt it.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="section-head">
+        <h2 class="title-2">Your controls</h2>
+      </div>
+      <div class="rows">
+        <div class="row"><span class="dot dot-accent"></span><div><div class="row-title headline">Clear your data</div><p class="row-body subheadline">Any kind of stored data, or all of it, can be cleared from Settings.</p></div></div>
+        <div class="row"><span class="dot dot-accent"></span><div><div class="row-title headline">Fingerprint app lock</div><p class="row-body subheadline">App lock can require your fingerprint.</p></div></div>
+        <div class="row"><span class="dot dot-accent"></span><div><div class="row-title headline">Account deletion</div><p class="row-body subheadline">Deleting your account removes the user record and the backup together.</p></div></div>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="section-head">
+        <h2 class="title-2">Terms, briefly</h2>
+      </div>
+      <div class="card">
+        <p class="subheadline text-mid">Chitti was built by Owl Coders for the iQOO Hackathon 2026 and is provided as-is, with no warranty. The repository does not currently publish a formal software license — check the <a href="https://github.com/NandiVardhan2007/chitti" target="_blank" rel="noopener">repo</a> for anything more recent. Questions about privacy or this project can go to <a href="mailto:chittibot7@gmail.com">chittibot7@gmail.com</a>. Full terms are on the <a href="terms.html">Terms &amp; Conditions</a> page.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- SHARED_FOOTER -->
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span class="footnote">© 2026 Owl Coders</span>
+      <span class="sep">·</span>
+      <a href="https://github.com/NandiVardhan2007/chitti" target="_blank" rel="noopener">GitHub</a>
+      <span class="sep">·</span>
+      <a href="mailto:chittibot7@gmail.com">chittibot7@gmail.com</a>
+      <span class="footer-spacer"></span>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="cookies.html">Cookies</a>
+    </div>
+  </footer>
+
+  <div class="cookie-banner" id="cookie-banner" role="region" aria-label="Cookie notice">
+    <p class="subheadline">This site sets no tracking cookies and loads no analytics. It stores a single local flag so this notice stays dismissed. <a href="cookies.html">Details</a>.</p>
+    <div class="cookie-actions">
+      <button class="btn btn-primary" id="cookie-accept" type="button">Got it</button>
+      <button class="btn btn-secondary" id="cookie-dismiss" type="button">Dismiss</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

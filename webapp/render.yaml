@@ -1,0 +1,30 @@
+# Render Blueprint for the Chitti marketing/docs website (Static Site).
+# Separate from backend/render.yaml (the chitti-backend Web Service) — this site runs no
+# server process and never talks to that service. In Render: New > Blueprint, pick this repo
+# and set the Blueprint file path to webapp/render.yaml.
+#
+# Static sites on Render are `type: web` with `runtime: static` (there is no `type: static`).
+# Plain HTML/CSS/JS needs no build step; `staticPublishPath: .` publishes the rootDir as-is.
+services:
+  - type: web
+    runtime: static
+    name: chitti-web
+    rootDir: webapp
+    buildCommand: "echo 'static site — no build step'"
+    staticPublishPath: .
+    autoDeploy: true
+    # Clean URLs: serve /docs.html at /docs, etc. These are rewrites (URL stays clean),
+    # not server logic.
+    routes:
+      - type: rewrite
+        source: /docs
+        destination: /docs.html
+      - type: rewrite
+        source: /privacy
+        destination: /privacy.html
+      - type: rewrite
+        source: /cookies
+        destination: /cookies.html
+      - type: rewrite
+        source: /terms
+        destination: /terms.html

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chitti — an AI assistant that lives on your phone, not in the cloud</title>
+  <meta name="description" content="Chitti is an Android AI assistant that reads your notifications on-device, surfaces what needs you on a single Today list, and answers by voice or text — with a language model that runs on the phone itself.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="index.html" aria-label="Chitti home">
+        <svg viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="fh" cx="0.36" cy="0.3" r="0.82"><stop offset="0" stop-color="#FFD86B"/><stop offset="0.55" stop-color="#F0B31C"/><stop offset="1" stop-color="#B9860A"/></radialGradient><linearGradient id="bh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C1C1F"/><stop offset="1" stop-color="#050508"/></linearGradient></defs><rect width="100" height="100" rx="23" fill="url(#bh)"/><circle cx="50" cy="50" r="31" fill="url(#fh)"/><g transform="translate(50 50) skewX(-8) translate(-50 -50)"><rect x="38.5" y="38" width="7.5" height="17" rx="3.75" fill="#050508"/><rect x="54" y="38" width="7.5" height="17" rx="3.75" fill="#050508"/></g><path d="M27.4 41.8 A24 24 0 0 1 41.8 27.4" stroke="#FFFFFF" stroke-opacity="0.4" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        <span>Chitti</span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a class="nav-link" href="index.html" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.6V20h14V9.6"/></svg>
+          <span class="nav-labels">Home</span>
+        </a>
+        <a class="nav-link" href="docs.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M9.5 12h6M9.5 16h6"/></svg>
+          <span class="nav-labels">Docs</span>
+        </a>
+        <a class="nav-link" href="privacy.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.8-3.3 7.9-7 9-3.7-1.1-7-4.2-7-9V6z"/></svg>
+          <span class="nav-labels">Privacy</span>
+        </a>
+        <a class="nav-link" href="cookies.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="10" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="15" r="1" fill="currentColor" stroke="none"/></svg>
+          <span class="nav-labels">Cookies</span>
+        </a>
+        <a class="btn btn-primary nav-cta" href="https://github.com/NandiVardhan2007/chitti/releases/latest" target="_blank" rel="noopener">Get the APK</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap">
+      <svg class="hero-mark" viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="fb" cx="0.36" cy="0.3" r="0.82"><stop offset="0" stop-color="#FFD86B"/><stop offset="0.55" stop-color="#F0B31C"/><stop offset="1" stop-color="#B9860A"/></radialGradient><linearGradient id="bb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C1C1F"/><stop offset="1" stop-color="#050508"/></linearGradient></defs><rect width="100" height="100" rx="23" fill="url(#bb)"/><circle cx="50" cy="50" r="31" fill="url(#fb)"/><g transform="translate(50 50) skewX(-8) translate(-50 -50)"><rect x="38.5" y="38" width="7.5" height="17" rx="3.75" fill="#050508"/><rect x="54" y="38" width="7.5" height="17" rx="3.75" fill="#050508"/></g><path d="M27.4 41.8 A24 24 0 0 1 41.8 27.4" stroke="#FFFFFF" stroke-opacity="0.4" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      <h1 class="large-title">An AI assistant that lives on your phone, not in the cloud.</h1>
+      <p class="hero-sub">Chitti reads the notifications that arrive on your phone, works out what actually needs you, and keeps it on a single Today list. Ask it things by voice or text — it answers with a language model running on the phone itself.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="https://github.com/NandiVardhan2007/chitti/releases/latest" target="_blank" rel="noopener">Get the APK</a>
+        <a class="btn btn-secondary" href="docs.html">Read the docs</a>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="section-head">
+        <h2 class="title-1">What it does</h2>
+      </div>
+      <div class="grid">
+        <div class="card feature">
+          <span class="dot dot-accent"></span>
+          <h3 class="title-3">Today</h3>
+          <p class="text-mid subheadline">Commitments pulled out of your notifications, urgent ones first, with one-tap reply, calendar and reminder actions — plus a log of what Chitti did for you.</p>
+        </div>
+        <div class="card feature">
+          <span class="dot dot-purple"></span>
+          <h3 class="title-3">Ask</h3>
+          <p class="text-mid subheadline">Type or talk. It answers questions from facts you've saved, sets reminders, reports what's pending, toggles the flashlight, opens apps, and handles general questions with the on-device model.</p>
+        </div>
+        <div class="card feature">
+          <span class="dot dot-info"></span>
+          <h3 class="title-3">Voice</h3>
+          <p class="text-mid subheadline">Tap the mic and speak. Chitti shows the transcript live and answers aloud.</p>
+        </div>
+        <div class="card feature">
+          <span class="dot dot-success"></span>
+          <h3 class="title-3">Library</h3>
+          <p class="text-mid subheadline">Everything Chitti found in your notifications, plus the facts you've taught it.</p>
+        </div>
+        <div class="card feature">
+          <span class="dot dot-danger"></span>
+          <h3 class="title-3">Link checking</h3>
+          <p class="text-mid subheadline">Links opened through Chitti are checked on the phone and with Google Safe Browsing, then safe ones open in your browser.</p>
+        </div>
+        <div class="card feature">
+          <span class="dot dot-warning"></span>
+          <h3 class="title-3">Personal details</h3>
+          <p class="text-mid subheadline">ID documents are scanned and parsed on the phone and kept in an encrypted vault behind your fingerprint. Chitti can fill them into forms through Android Autofill.</p>
+        </div>
+        <div class="card feature">
+          <span class="dot dot-accent"></span>
+          <h3 class="title-3">Encrypted backup</h3>
+          <p class="text-mid subheadline">Optional, end-to-end encrypted with a password only you know.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="callout">
+        <span class="dot"></span>
+        <div>
+          <h3 class="headline">Your backup is end-to-end encrypted</h3>
+          <p class="text-mid subheadline" style="margin-top:4px">The optional backup is encrypted on your phone before it ever leaves the device — the server only ever stores ciphertext. <a href="privacy.html">See exactly what the backend can and can't see &rarr;</a></p>
+        </div>
+      </div>
+
+      <p class="credit footnote">Built by <a href="https://github.com/NandiVardhan2007" target="_blank" rel="noopener">Owl Coders</a> for the iQOO Hackathon 2026, Hyderabad. <a href="https://github.com/NandiVardhan2007/chitti" target="_blank" rel="noopener">Source on GitHub</a>.</p>
+    </section>
+  </main>
+
+  <!-- SHARED_FOOTER -->
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span class="footnote">© 2026 Owl Coders</span>
+      <span class="sep">·</span>
+      <a href="https://github.com/NandiVardhan2007/chitti" target="_blank" rel="noopener">GitHub</a>
+      <span class="sep">·</span>
+      <a href="mailto:chittibot7@gmail.com">chittibot7@gmail.com</a>
+      <span class="footer-spacer"></span>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="cookies.html">Cookies</a>
+    </div>
+  </footer>
+
+  <div class="cookie-banner" id="cookie-banner" role="region" aria-label="Cookie notice">
+    <p class="subheadline">This site sets no tracking cookies and loads no analytics. It stores a single local flag so this notice stays dismissed. <a href="cookies.html">Details</a>.</p>
+    <div class="cookie-actions">
+      <button class="btn btn-primary" id="cookie-accept" type="button">Got it</button>
+      <button class="btn btn-secondary" id="cookie-dismiss" type="button">Dismiss</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

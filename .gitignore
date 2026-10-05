@@ -1,0 +1,90 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+build/
+/build
+*/build
+app/build/
+captures/
+
+# Gradle files
+.gradle/
+gradle-8.5/
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Log files
+*.log
+
+# Android Studio / IntelliJ IDEA
+*.iml
+.idea/
+.navigation/
+
+# VS Code
+.vscode/
+
+# External native build folder
+.externalNativeBuild
+.cxx/
+
+# Large Model weights and binaries
+*.bin
+*.tflite
+*.onnx
+*.pt
+*.safetensors
+
+# Signing / Keystores
+*.jks
+*.keystore
+signing.properties
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Gradle wrapper (do not ignore wrapper jar)
+!gradle/wrapper/gradle-wrapper.jar
+
+# Agent and AI IDE files
+.agents/
+.claude/
+brain/
+skills-lock.json
+
+# Node/NPM files
+node_modules/
+package.json
+package-lock.json
+
+# MCP files
+.mcp.json
+
+# Tool outputs and local captures
+brag-output*/
+/screenshots/
+/screenshots.zip
+
+# Backend (Node) - secrets and deps
+backend/node_modules/
+backend/.env
+backend/*.json.key
+**/service-account*.json
+# The root rules above ignore package.json/package-lock.json; Render's `npm ci` needs the backend's.
+!backend/package.json
+!backend/package-lock.json
+/demo-video/

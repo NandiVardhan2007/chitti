@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon silhouette: the Chitti face with its eyes cut out. Generated from
+     branding/chitti-logo/svg/chitti-adaptive-foreground.svg (face scaled 0.78 in a 100 viewport). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M25.820,50.000 a24.180,24.180 0 1,0 48.360,0 a24.180,24.180 0 1,0 -48.360,0 Z M41.934,43.565 L42.140,42.808 L42.532,42.102 L43.082,41.497 L43.753,41.032 L44.499,40.740 L45.270,40.640 L46.014,40.740 L46.678,41.032 L47.218,41.497 L47.598,42.102 L47.791,42.808 L47.784,43.565 L46.743,50.975 L46.537,51.732 L46.146,52.438 L45.596,53.043 L44.924,53.508 L44.178,53.800 L43.407,53.900 L42.664,53.800 L41.999,53.508 L41.459,53.043 L41.079,52.438 L40.886,51.732 L40.893,50.975 Z M54.024,43.565 L54.230,42.808 L54.622,42.102 L55.172,41.497 L55.843,41.032 L56.589,40.740 L57.360,40.640 L58.104,40.740 L58.768,41.032 L59.308,41.497 L59.688,42.102 L59.881,42.808 L59.874,43.565 L58.833,50.975 L58.627,51.732 L58.236,52.438 L57.686,53.043 L57.014,53.508 L56.268,53.800 L55.497,53.900 L54.754,53.800 L54.089,53.508 L53.549,53.043 L53.169,52.438 L52.976,51.732 L52.983,50.975 Z" />
+</vector>

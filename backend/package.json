@@ -1,0 +1,30 @@
+{
+  "name": "chitti-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chitti accounts and end-to-end encrypted backups (Express + MongoDB GridFS + Firebase Auth)",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --env-file=.env --watch src/server.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "firebase-admin": "^14.4.0",
+    "helmet": "^8.3.0",
+    "mongodb": "^7.6.0",
+    "pino": "^10.3.1",
+    "pino-http": "^11.0.0"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.2.0",
+    "supertest": "^7.2.2",
+    "vitest": "^5.0.1"
+  }
+}
